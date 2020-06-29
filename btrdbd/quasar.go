@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/UlricQin/btrdb/inter/bstore"
-	"github.com/UlricQin/btrdb/qtree"
+	"github.com/iznauy/BTrDB/inter/bstore"
+	"github.com/iznauy/BTrDB/qtree"
 	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
 )

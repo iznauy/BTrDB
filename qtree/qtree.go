@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/UlricQin/btrdb/inter/bstore"
+	"github.com/iznauy/BTrDB/inter/bstore"
 	"github.com/op/go-logging"
 )
 

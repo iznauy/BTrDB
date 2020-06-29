@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/UlricQin/btrdb/btrdbd"
+	"github.com/iznauy/BTrDB/btrdbd"
 	"os"
 	"os/signal"
 	"runtime"
@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/UlricQin/btrdb/cpinterface"
-	"github.com/UlricQin/btrdb/httpinterface"
-	"github.com/UlricQin/btrdb/inter/bstore"
+	"github.com/iznauy/BTrDB/cpinterface"
+	"github.com/iznauy/BTrDB/httpinterface"
+	"github.com/iznauy/BTrDB/inter/bstore"
 	"github.com/op/go-logging"
 )
 

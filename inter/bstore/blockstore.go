@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/UlricQin/btrdb/inter/bprovider"
-	"github.com/UlricQin/btrdb/inter/fileprovider"
+	"github.com/iznauy/BTrDB/inter/bprovider"
+	"github.com/iznauy/BTrDB/inter/fileprovider"
 	"github.com/pborman/uuid"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

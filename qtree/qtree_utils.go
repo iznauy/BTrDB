@@ -3,7 +3,7 @@ package qtree
 import (
 	"fmt"
 
-	"github.com/UlricQin/btrdb/inter/bstore"
+	"github.com/iznauy/BTrDB/inter/bstore"
 	"github.com/pborman/uuid"
 )
 

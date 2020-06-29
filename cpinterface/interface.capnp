@@ -1,6 +1,6 @@
 using Go = import "go.capnp";
 $Go.package("cpinterface");
-$Go.import("github.com/UlricQin/btrdb/cpinterface");
+$Go.import("github.com/iznauy/BTrDB/cpinterface");
 
 @0x85360901bcc4bed2;
 

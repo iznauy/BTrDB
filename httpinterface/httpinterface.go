@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	btrdb2 "github.com/UlricQin/btrdb/btrdbd"
+	btrdb2 "github.com/iznauy/BTrDB/btrdbd"
 	"io"
 	"math"
 	"net/http"
@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/UlricQin/btrdb/qtree"
+	"github.com/iznauy/BTrDB/qtree"
 	"github.com/bmizerany/pat"
 	"github.com/op/go-logging"
 	"github.com/pborman/uuid"

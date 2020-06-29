@@ -1,13 +1,13 @@
 package cpinterface
 
 import (
-	btrdb2 "github.com/UlricQin/btrdb/btrdbd"
+	btrdb2 "github.com/iznauy/BTrDB/btrdbd"
 	"net"
 	"os"
 	"os/signal"
 	"sync"
 
-	"github.com/UlricQin/btrdb/qtree"
+	"github.com/iznauy/BTrDB/qtree"
 	capn "github.com/glycerine/go-capnproto"
 	"github.com/op/go-logging"
 	"github.com/pborman/uuid"

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/UlricQin/btrdb/inter/bprovider"
+	"github.com/iznauy/BTrDB/inter/bprovider"
 )
 
 var ser_buf_pool = sync.Pool{

@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/UlricQin/btrdb/inter/bprovider"
+	"github.com/iznauy/BTrDB/inter/bprovider"
 	"github.com/op/go-logging"
 )
 
