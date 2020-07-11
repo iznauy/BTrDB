@@ -18,6 +18,9 @@ type Config struct {
 		Provider          string
 		MongoDBServer     *string
 		MongoDBCollection *string
+		MySQLUser         *string
+		MySQLPassword     *string
+		MySQLDBName       *string
 	}
 	Storage struct {
 		Filepath *string
@@ -62,7 +65,18 @@ func loadConfig() {
 	}
 
 	if Configuration.Meta.Provider == "mysql" {
-
+		if Configuration.Meta.MySQLUser == nil {
+			fmt.Printf("Aborting: configuration missing MySQL user name\n")
+			os.Exit(1)
+		}
+		if Configuration.Meta.MySQLPassword == nil {
+			fmt.Printf("Aborting: configuration missing MySQL password\n")
+			os.Exit(1)
+		}
+		if Configuration.Meta.MySQLDBName == nil {
+			fmt.Printf("Aborting: configuration missing MySQL database name\n")
+			os.Exit(1)
+		}
 	} else if Configuration.Meta.Provider == "mongodb" {
 		if Configuration.Meta.MongoDBServer == nil {
 			fmt.Printf("Aborting: configuration missing MongoDB server address\n")
@@ -104,7 +118,9 @@ func loadConfig() {
 	}
 
 	if Configuration.Meta.Provider == "mysql" {
-
+		Params["user"] = *Configuration.Meta.MySQLUser
+		Params["password"] = *Configuration.Meta.MySQLPassword
+		Params["dbname"] = *Configuration.Meta.MySQLDBName
 	}
 	if Configuration.Meta.Provider == "mongodb" {
 		Params["server"] = *Configuration.Meta.MongoDBServer
