@@ -114,6 +114,596 @@ func (x *TestConnectionResponse) GetSuccess() bool {
 	return false
 }
 
+type RawPoint struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Time  int64   `protobuf:"fixed64,1,opt,name=time,proto3" json:"time,omitempty"`
+	Value float64 `protobuf:"fixed64,2,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (x *RawPoint) Reset() {
+	*x = RawPoint{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RawPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RawPoint) ProtoMessage() {}
+
+func (x *RawPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RawPoint.ProtoReflect.Descriptor instead.
+func (*RawPoint) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RawPoint) GetTime() int64 {
+	if x != nil {
+		return x.Time
+	}
+	return 0
+}
+
+func (x *RawPoint) GetValue() float64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+type DeleteRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Uuid  []byte `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Start int64  `protobuf:"fixed64,2,opt,name=start,proto3" json:"start,omitempty"`
+	End   int64  `protobuf:"fixed64,3,opt,name=end,proto3" json:"end,omitempty"`
+}
+
+func (x *DeleteRequest) Reset() {
+	*x = DeleteRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRequest) ProtoMessage() {}
+
+func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRequest) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DeleteRequest) GetUuid() []byte {
+	if x != nil {
+		return x.Uuid
+	}
+	return nil
+}
+
+func (x *DeleteRequest) GetStart() int64 {
+	if x != nil {
+		return x.Start
+	}
+	return 0
+}
+
+func (x *DeleteRequest) GetEnd() int64 {
+	if x != nil {
+		return x.End
+	}
+	return 0
+}
+
+type DeleteResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status *Status `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+}
+
+func (x *DeleteResponse) Reset() {
+	*x = DeleteResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteResponse) ProtoMessage() {}
+
+func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteResponse) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeleteResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+type InsertRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Uuid   []byte      `protobuf:"bytes,2,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Values []*RawPoint `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+}
+
+func (x *InsertRequest) Reset() {
+	*x = InsertRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *InsertRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InsertRequest) ProtoMessage() {}
+
+func (x *InsertRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InsertRequest.ProtoReflect.Descriptor instead.
+func (*InsertRequest) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InsertRequest) GetUuid() []byte {
+	if x != nil {
+		return x.Uuid
+	}
+	return nil
+}
+
+func (x *InsertRequest) GetValues() []*RawPoint {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+type InsertResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status *Status `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+}
+
+func (x *InsertResponse) Reset() {
+	*x = InsertResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *InsertResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InsertResponse) ProtoMessage() {}
+
+func (x *InsertResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InsertResponse.ProtoReflect.Descriptor instead.
+func (*InsertResponse) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *InsertResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+type QueryRangeRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Uuid    []byte `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Start   int64  `protobuf:"fixed64,2,opt,name=start,proto3" json:"start,omitempty"`
+	End     int64  `protobuf:"fixed64,3,opt,name=end,proto3" json:"end,omitempty"`
+	Version uint64 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+}
+
+func (x *QueryRangeRequest) Reset() {
+	*x = QueryRangeRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QueryRangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryRangeRequest) ProtoMessage() {}
+
+func (x *QueryRangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryRangeRequest.ProtoReflect.Descriptor instead.
+func (*QueryRangeRequest) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *QueryRangeRequest) GetUuid() []byte {
+	if x != nil {
+		return x.Uuid
+	}
+	return nil
+}
+
+func (x *QueryRangeRequest) GetStart() int64 {
+	if x != nil {
+		return x.Start
+	}
+	return 0
+}
+
+func (x *QueryRangeRequest) GetEnd() int64 {
+	if x != nil {
+		return x.End
+	}
+	return 0
+}
+
+func (x *QueryRangeRequest) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+type QueryRangeResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status  *Status     `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Version uint64      `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Values  []*RawPoint `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+}
+
+func (x *QueryRangeResponse) Reset() {
+	*x = QueryRangeResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QueryRangeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryRangeResponse) ProtoMessage() {}
+
+func (x *QueryRangeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryRangeResponse.ProtoReflect.Descriptor instead.
+func (*QueryRangeResponse) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *QueryRangeResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+func (x *QueryRangeResponse) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *QueryRangeResponse) GetValues() []*RawPoint {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+type QueryNearestValueRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Uuid      []byte `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Time      int64  `protobuf:"fixed64,2,opt,name=time,proto3" json:"time,omitempty"`
+	Version   uint64 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	Backwards bool   `protobuf:"varint,4,opt,name=backwards,proto3" json:"backwards,omitempty"`
+}
+
+func (x *QueryNearestValueRequest) Reset() {
+	*x = QueryNearestValueRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QueryNearestValueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryNearestValueRequest) ProtoMessage() {}
+
+func (x *QueryNearestValueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryNearestValueRequest.ProtoReflect.Descriptor instead.
+func (*QueryNearestValueRequest) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *QueryNearestValueRequest) GetUuid() []byte {
+	if x != nil {
+		return x.Uuid
+	}
+	return nil
+}
+
+func (x *QueryNearestValueRequest) GetTime() int64 {
+	if x != nil {
+		return x.Time
+	}
+	return 0
+}
+
+func (x *QueryNearestValueRequest) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *QueryNearestValueRequest) GetBackwards() bool {
+	if x != nil {
+		return x.Backwards
+	}
+	return false
+}
+
+type QueryNearestValueResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status  *Status   `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Version uint64    `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Value   *RawPoint `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (x *QueryNearestValueResponse) Reset() {
+	*x = QueryNearestValueResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QueryNearestValueResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryNearestValueResponse) ProtoMessage() {}
+
+func (x *QueryNearestValueResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryNearestValueResponse.ProtoReflect.Descriptor instead.
+func (*QueryNearestValueResponse) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *QueryNearestValueResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+func (x *QueryNearestValueResponse) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *QueryNearestValueResponse) GetValue() *RawPoint {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+type Status struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Code int32  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Msg  string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+}
+
+func (x *Status) Reset() {
+	*x = Status{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Status) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Status) ProtoMessage() {}
+
+func (x *Status) ProtoReflect() protoreflect.Message {
+	mi := &file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Status.ProtoReflect.Descriptor instead.
+func (*Status) Descriptor() ([]byte, []int) {
+	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Status) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *Status) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
 var File_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto protoreflect.FileDescriptor
 
 var file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDesc = []byte{
@@ -125,17 +715,89 @@ var file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDesc = []byte{
 	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x32, 0x0a, 0x16, 0x54,
 	0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x32,
-	0x68, 0x0a, 0x05, 0x42, 0x54, 0x72, 0x44, 0x42, 0x12, 0x5f, 0x0a, 0x0e, 0x54, 0x65, 0x73, 0x74,
-	0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x24, 0x2e, 0x67, 0x72, 0x70,
-	0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43,
-	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x25, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
-	0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x27, 0x5a, 0x25, 0x67, 0x69, 0x74,
-	0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x69, 0x7a, 0x6e, 0x61, 0x75, 0x79, 0x2f, 0x42,
-	0x54, 0x72, 0x44, 0x42, 0x2f, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61,
-	0x63, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x22,
+	0x34, 0x0a, 0x08, 0x52, 0x61, 0x77, 0x50, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x74,
+	0x69, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x10, 0x52, 0x04, 0x74, 0x69, 0x6d, 0x65, 0x12,
+	0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x01, 0x52, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x4b, 0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x75, 0x75, 0x69, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74,
+	0x61, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x10, 0x52, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74,
+	0x12, 0x10, 0x0a, 0x03, 0x65, 0x6e, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x10, 0x52, 0x03, 0x65,
+	0x6e, 0x64, 0x22, 0x3f, 0x0a, 0x0e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2d, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72,
+	0x66, 0x61, 0x63, 0x65, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x22, 0x54, 0x0a, 0x0d, 0x49, 0x6e, 0x73, 0x65, 0x72, 0x74, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0c, 0x52, 0x04, 0x75, 0x75, 0x69, 0x64, 0x12, 0x2f, 0x0a, 0x06, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69,
+	0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x52, 0x61, 0x77, 0x50, 0x6f, 0x69, 0x6e,
+	0x74, 0x52, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x22, 0x3f, 0x0a, 0x0e, 0x49, 0x6e, 0x73,
+	0x65, 0x72, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2d, 0x0a, 0x06, 0x73,
+	0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x67, 0x72,
+	0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x53, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x69, 0x0a, 0x11, 0x51, 0x75,
+	0x65, 0x72, 0x79, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x75,
+	0x75, 0x69, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x10, 0x52, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x65, 0x6e, 0x64,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x10, 0x52, 0x03, 0x65, 0x6e, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x76,
+	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x76, 0x65,
+	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x22, 0x8e, 0x01, 0x0a, 0x12, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52,
+	0x61, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2d, 0x0a, 0x06,
+	0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x67,
+	0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x53, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x76,
+	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x76, 0x65,
+	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x2f, 0x0a, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x18,
+	0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65,
+	0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x52, 0x61, 0x77, 0x50, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x06,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x22, 0x7a, 0x0a, 0x18, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4e,
+	0x65, 0x61, 0x72, 0x65, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
+	0x52, 0x04, 0x75, 0x75, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x10, 0x52, 0x04, 0x74, 0x69, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65,
+	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x76, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1c, 0x0a, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x77, 0x61, 0x72, 0x64,
+	0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x77, 0x61, 0x72,
+	0x64, 0x73, 0x22, 0x93, 0x01, 0x0a, 0x19, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4e, 0x65, 0x61, 0x72,
+	0x65, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x2d, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x15, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+	0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12,
+	0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04,
+	0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x2d, 0x0a, 0x05, 0x76, 0x61, 0x6c,
+	0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69,
+	0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x52, 0x61, 0x77, 0x50, 0x6f, 0x69, 0x6e,
+	0x74, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x2e, 0x0a, 0x06, 0x53, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05,
+	0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x32, 0xd0, 0x02, 0x0a, 0x05, 0x42, 0x54, 0x72,
+	0x44, 0x42, 0x12, 0x45, 0x0a, 0x06, 0x49, 0x6e, 0x73, 0x65, 0x72, 0x74, 0x12, 0x1c, 0x2e, 0x67,
+	0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x49, 0x6e, 0x73,
+	0x65, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1d, 0x2e, 0x67, 0x72, 0x70,
+	0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x49, 0x6e, 0x73, 0x65, 0x72,
+	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x45, 0x0a, 0x06, 0x44, 0x65, 0x6c,
+	0x65, 0x74, 0x65, 0x12, 0x1c, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66,
+	0x61, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x1d, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63,
+	0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x51, 0x0a, 0x0a, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x12, 0x20,
+	0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x51,
+	0x75, 0x65, 0x72, 0x79, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x21, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+	0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x66, 0x0a, 0x11, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4e, 0x65, 0x61, 0x72,
+	0x65, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x12, 0x27, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69,
+	0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4e, 0x65,
+	0x61, 0x72, 0x65, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x28, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63,
+	0x65, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4e, 0x65, 0x61, 0x72, 0x65, 0x73, 0x74, 0x56, 0x61,
+	0x6c, 0x75, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x27, 0x5a, 0x25, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x69, 0x7a, 0x6e, 0x61, 0x75, 0x79,
+	0x2f, 0x42, 0x54, 0x72, 0x44, 0x42, 0x2f, 0x67, 0x72, 0x70, 0x63, 0x69, 0x6e, 0x74, 0x65, 0x72,
+	0x66, 0x61, 0x63, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -150,19 +812,42 @@ func file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescGZIP() []byte
 	return file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDescData
 }
 
-var file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_goTypes = []interface{}{
-	(*TestConnectionRequest)(nil),  // 0: grpcinterface.TestConnectionRequest
-	(*TestConnectionResponse)(nil), // 1: grpcinterface.TestConnectionResponse
+	(*TestConnectionRequest)(nil),     // 0: grpcinterface.TestConnectionRequest
+	(*TestConnectionResponse)(nil),    // 1: grpcinterface.TestConnectionResponse
+	(*RawPoint)(nil),                  // 2: grpcinterface.RawPoint
+	(*DeleteRequest)(nil),             // 3: grpcinterface.DeleteRequest
+	(*DeleteResponse)(nil),            // 4: grpcinterface.DeleteResponse
+	(*InsertRequest)(nil),             // 5: grpcinterface.InsertRequest
+	(*InsertResponse)(nil),            // 6: grpcinterface.InsertResponse
+	(*QueryRangeRequest)(nil),         // 7: grpcinterface.QueryRangeRequest
+	(*QueryRangeResponse)(nil),        // 8: grpcinterface.QueryRangeResponse
+	(*QueryNearestValueRequest)(nil),  // 9: grpcinterface.QueryNearestValueRequest
+	(*QueryNearestValueResponse)(nil), // 10: grpcinterface.QueryNearestValueResponse
+	(*Status)(nil),                    // 11: grpcinterface.Status
 }
 var file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_depIdxs = []int32{
-	0, // 0: grpcinterface.BTrDB.TestConnection:input_type -> grpcinterface.TestConnectionRequest
-	1, // 1: grpcinterface.BTrDB.TestConnection:output_type -> grpcinterface.TestConnectionResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	11, // 0: grpcinterface.DeleteResponse.status:type_name -> grpcinterface.Status
+	2,  // 1: grpcinterface.InsertRequest.values:type_name -> grpcinterface.RawPoint
+	11, // 2: grpcinterface.InsertResponse.status:type_name -> grpcinterface.Status
+	11, // 3: grpcinterface.QueryRangeResponse.status:type_name -> grpcinterface.Status
+	2,  // 4: grpcinterface.QueryRangeResponse.values:type_name -> grpcinterface.RawPoint
+	11, // 5: grpcinterface.QueryNearestValueResponse.status:type_name -> grpcinterface.Status
+	2,  // 6: grpcinterface.QueryNearestValueResponse.value:type_name -> grpcinterface.RawPoint
+	5,  // 7: grpcinterface.BTrDB.Insert:input_type -> grpcinterface.InsertRequest
+	3,  // 8: grpcinterface.BTrDB.Delete:input_type -> grpcinterface.DeleteRequest
+	7,  // 9: grpcinterface.BTrDB.QueryRange:input_type -> grpcinterface.QueryRangeRequest
+	9,  // 10: grpcinterface.BTrDB.QueryNearestValue:input_type -> grpcinterface.QueryNearestValueRequest
+	6,  // 11: grpcinterface.BTrDB.Insert:output_type -> grpcinterface.InsertResponse
+	4,  // 12: grpcinterface.BTrDB.Delete:output_type -> grpcinterface.DeleteResponse
+	8,  // 13: grpcinterface.BTrDB.QueryRange:output_type -> grpcinterface.QueryRangeResponse
+	10, // 14: grpcinterface.BTrDB.QueryNearestValue:output_type -> grpcinterface.QueryNearestValueResponse
+	11, // [11:15] is the sub-list for method output_type
+	7,  // [7:11] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_init() }
@@ -195,6 +880,126 @@ func file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_init() {
 				return nil
 			}
 		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RawPoint); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*InsertRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*InsertResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QueryRangeRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QueryRangeResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QueryNearestValueRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QueryNearestValueResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Status); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -202,7 +1007,7 @@ func file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_github_com_iznauy_BTrDB_grpcinterface_btrdb_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -228,7 +1033,10 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BTrDBClient interface {
-	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
+	Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*InsertResponse, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	QueryRange(ctx context.Context, in *QueryRangeRequest, opts ...grpc.CallOption) (*QueryRangeResponse, error)
+	QueryNearestValue(ctx context.Context, in *QueryNearestValueRequest, opts ...grpc.CallOption) (*QueryNearestValueResponse, error)
 }
 
 type bTrDBClient struct {
@@ -239,9 +1047,36 @@ func NewBTrDBClient(cc grpc.ClientConnInterface) BTrDBClient {
 	return &bTrDBClient{cc}
 }
 
-func (c *bTrDBClient) TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error) {
-	out := new(TestConnectionResponse)
-	err := c.cc.Invoke(ctx, "/grpcinterface.BTrDB/TestConnection", in, out, opts...)
+func (c *bTrDBClient) Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*InsertResponse, error) {
+	out := new(InsertResponse)
+	err := c.cc.Invoke(ctx, "/grpcinterface.BTrDB/Insert", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bTrDBClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/grpcinterface.BTrDB/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bTrDBClient) QueryRange(ctx context.Context, in *QueryRangeRequest, opts ...grpc.CallOption) (*QueryRangeResponse, error) {
+	out := new(QueryRangeResponse)
+	err := c.cc.Invoke(ctx, "/grpcinterface.BTrDB/QueryRange", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bTrDBClient) QueryNearestValue(ctx context.Context, in *QueryNearestValueRequest, opts ...grpc.CallOption) (*QueryNearestValueResponse, error) {
+	out := new(QueryNearestValueResponse)
+	err := c.cc.Invoke(ctx, "/grpcinterface.BTrDB/QueryNearestValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -250,35 +1085,101 @@ func (c *bTrDBClient) TestConnection(ctx context.Context, in *TestConnectionRequ
 
 // BTrDBServer is the server API for BTrDB service.
 type BTrDBServer interface {
-	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
+	Insert(context.Context, *InsertRequest) (*InsertResponse, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	QueryRange(context.Context, *QueryRangeRequest) (*QueryRangeResponse, error)
+	QueryNearestValue(context.Context, *QueryNearestValueRequest) (*QueryNearestValueResponse, error)
 }
 
 // UnimplementedBTrDBServer can be embedded to have forward compatible implementations.
 type UnimplementedBTrDBServer struct {
 }
 
-func (*UnimplementedBTrDBServer) TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TestConnection not implemented")
+func (*UnimplementedBTrDBServer) Insert(context.Context, *InsertRequest) (*InsertResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Insert not implemented")
+}
+func (*UnimplementedBTrDBServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (*UnimplementedBTrDBServer) QueryRange(context.Context, *QueryRangeRequest) (*QueryRangeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryRange not implemented")
+}
+func (*UnimplementedBTrDBServer) QueryNearestValue(context.Context, *QueryNearestValueRequest) (*QueryNearestValueResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryNearestValue not implemented")
 }
 
 func RegisterBTrDBServer(s *grpc.Server, srv BTrDBServer) {
 	s.RegisterService(&_BTrDB_serviceDesc, srv)
 }
 
-func _BTrDB_TestConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TestConnectionRequest)
+func _BTrDB_Insert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InsertRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BTrDBServer).TestConnection(ctx, in)
+		return srv.(BTrDBServer).Insert(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/grpcinterface.BTrDB/TestConnection",
+		FullMethod: "/grpcinterface.BTrDB/Insert",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BTrDBServer).TestConnection(ctx, req.(*TestConnectionRequest))
+		return srv.(BTrDBServer).Insert(ctx, req.(*InsertRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BTrDB_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BTrDBServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpcinterface.BTrDB/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BTrDBServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BTrDB_QueryRange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryRangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BTrDBServer).QueryRange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpcinterface.BTrDB/QueryRange",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BTrDBServer).QueryRange(ctx, req.(*QueryRangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BTrDB_QueryNearestValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryNearestValueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BTrDBServer).QueryNearestValue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpcinterface.BTrDB/QueryNearestValue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BTrDBServer).QueryNearestValue(ctx, req.(*QueryNearestValueRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -288,8 +1189,20 @@ var _BTrDB_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*BTrDBServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "TestConnection",
-			Handler:    _BTrDB_TestConnection_Handler,
+			MethodName: "Insert",
+			Handler:    _BTrDB_Insert_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _BTrDB_Delete_Handler,
+		},
+		{
+			MethodName: "QueryRange",
+			Handler:    _BTrDB_QueryRange_Handler,
+		},
+		{
+			MethodName: "QueryNearestValue",
+			Handler:    _BTrDB_QueryNearestValue_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
