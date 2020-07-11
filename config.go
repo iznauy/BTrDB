@@ -9,16 +9,6 @@ import (
 )
 
 type Config struct {
-	Http struct {
-		Port    *int
-		Address *string
-		Enabled bool
-	}
-	Capnp struct {
-		Port    *int
-		Address *string
-		Enabled bool
-	}
 	GRPC struct {
 		Port    *int
 		Address *string
@@ -106,26 +96,6 @@ func loadConfig() {
 	if Configuration.Cache.RadosReadCache == nil {
 		z := 0
 		Configuration.Cache.RadosReadCache = &z
-	}
-
-	if Configuration.Http.Enabled && Configuration.Http.Port == nil {
-		fmt.Printf("Aborting: http server enabled, but no port specified\n")
-		os.Exit(1)
-	}
-
-	if Configuration.Http.Enabled && Configuration.Http.Address == nil {
-		fmt.Printf("Aborting: http server enabled, but no address specified\n")
-		os.Exit(1)
-	}
-
-	if Configuration.Capnp.Enabled && Configuration.Capnp.Port == nil {
-		fmt.Printf("Aborting: capn proto server enabled, but no port specified\n")
-		os.Exit(1)
-	}
-
-	if Configuration.Capnp.Enabled && Configuration.Capnp.Address == nil {
-		fmt.Printf("Aborting: capn proto server enabled, but no address specified\n")
-		os.Exit(1)
 	}
 
 	if Configuration.GRPC.Enabled && Configuration.GRPC.Port == nil {
