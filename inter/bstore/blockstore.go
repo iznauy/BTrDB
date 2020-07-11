@@ -2,6 +2,7 @@ package bstore
 
 import (
 	"errors"
+	"github.com/iznauy/BTrDB/inter/metaprovider"
 	"os"
 	"strconv"
 	"sync"
@@ -9,8 +10,6 @@ import (
 	"github.com/iznauy/BTrDB/inter/bprovider"
 	"github.com/iznauy/BTrDB/inter/fileprovider"
 	"github.com/pborman/uuid"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
 
 const LatestGeneration = uint64(^(uint64(0)))
@@ -23,8 +22,6 @@ func UUIDToMapKey(id uuid.UUID) [16]byte {
 }
 
 type BlockStore struct {
-	ses     *mgo.Session
-	db      *mgo.Database
 	_wlocks map[[16]byte]*sync.Mutex
 	glock   sync.RWMutex
 
@@ -40,6 +37,7 @@ type BlockStore struct {
 	cachemiss uint64
 	cachehit  uint64
 
+	meta  metaprovider.MetaProvider
 	store bprovider.StorageProvider
 	alloc chan uint64
 }
@@ -78,30 +76,24 @@ func (g *Generation) Number() uint64 { // 版本号信息
 	return g.New_SB.gen
 }
 
-func (bs *BlockStore) UnlinkGenerations(id uuid.UUID, sgen uint64, egen uint64) error {
-	iter := bs.db.C("superblocks").Find(bson.M{"uuid": id.String(), "gen": bson.M{"$gte": sgen, "$lt": egen}, "unlinked": false}).Iter()
-	rs := fake_sblock{}
-	for iter.Next(&rs) {
-		rs.Unlinked = true
-		_, err := bs.db.C("superblocks").Upsert(bson.M{"uuid": id.String(), "gen": rs.Gen}, rs)
-		if err != nil {
-			lg.Panic(err)
-		}
-	}
-	return nil
-}
-
 func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	bs := BlockStore{}
 	bs.params = params
 
-	// 初始化 mongo db 存储元数据细腻
-	ses, err := mgo.Dial(params["mongoserver"])
-	if err != nil {
-		return nil, err
+	if params["metaprovider"] == "mysql" {
+		meta, err := metaprovider.NewMySQLMetaProvider(params);
+		if err != nil {
+			lg.Panicf("init mysql metaprovider error: %v", err)
+		}
+		bs.meta = meta
+	} else if params["metaprovider"] == "mongodb" {
+		meta, err := metaprovider.NewMongoDBMetaProvider(params);
+		if err != nil {
+			lg.Panicf("init mongodb metaprovider error: %v", err)
+		}
+		bs.meta = meta
 	}
-	bs.ses = ses
-	bs.db = ses.DB(params["collection"])
+
 	bs._wlocks = make(map[[16]byte]*sync.Mutex)
 
 	// 虚拟地址分配器
@@ -124,7 +116,7 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	// 初始化 cache
 	cachesz, err := strconv.ParseInt(params["cachesize"], 0, 64)
 	if err != nil {
-		lg.Panic("Bad cache size: %v", err)
+		lg.Panicf("Bad cache size: %v", err)
 	}
 	bs.initCache(uint64(cachesz))
 
@@ -156,24 +148,18 @@ func (bs *BlockStore) ObtainGeneration(id uuid.UUID) *Generation {
 		cblocks: make([]*Coreblock, 0, 8192),
 		vblocks: make([]*Vectorblock, 0, 8192),
 	}
-	//We need a generation. Lets see if one is on disk
-	qry := bs.db.C("superblocks").Find(bson.M{"uuid": id.String()})
-	rs := fake_sblock{}
-	qerr := qry.Sort("-gen").One(&rs)
-	if qerr == mgo.ErrNotFound {
-		lg.Info("no superblock found for %v", id.String())
-		//Ok just create a new superblock/generation
+
+	meta, err := bs.meta.GetLatestMeta(id.String())
+	if err == metaprovider.MetaNotFound {
+		lg.Infof("no superblock found for %v", id.String())
 		gen.Cur_SB = NewSuperblock(id)
-	} else if qerr != nil {
-		//Well thats more serious
-		lg.Panic("Mongodb error: %v", qerr)
+	} else if err != nil {
+		lg.Panic("meta provider error: %v", err)
 	} else {
-		//Ok we have a superblock, pop the gen
-		//log.Info("Found a superblock for %v", id.String())
 		sb := Superblock{
 			uuid: id,
-			root: rs.Root,
-			gen:  rs.Gen,
+			root: meta.Root,
+			gen:  meta.Version,
 		}
 		gen.Cur_SB = &sb
 	}
@@ -199,31 +185,22 @@ func (gen *Generation) Commit() (map[uint64]uint64, error) {
 		lg.Panic("Could not obtain root address")
 	}
 	gen.New_SB.root = rootaddr
-	//dt := time.Now().Sub(then)
 
-	//log.Info("(LAS %4dus %dc%dv) ins blk u=%v gen=%v root=0x%016x",
-	//	uint64(dt/time.Microsecond), len(gen.cblocks), len(gen.vblocks), gen.Uuid().String(), gen.Number(), rootaddr)
-	/*if len(gen.vblocks) > 100 {
-		total := 0
-		for _, v:= range gen.vblocks {
-			total += int(v.Len)
-		}
-		log.Critical("Triggered vblock examination: %v blocks, %v points, %v avg", len(gen.vblocks), total, total/len(gen.vblocks))
-	}*/
 	gen.vblocks = nil
 	gen.cblocks = nil
-	fsb := fake_sblock{
-		Uuid: gen.New_SB.uuid.String(),
-		Gen:  gen.New_SB.gen,
-		Root: gen.New_SB.root,
+
+	meta := &metaprovider.Meta{
+		Uuid:    gen.New_SB.uuid.String(),
+		Version: gen.New_SB.gen,
+		Root:    gen.New_SB.root,
 	}
-	if err := gen.blockstore.db.C("superblocks").Insert(fsb); err != nil {
+	if err := gen.blockstore.meta.InsertMeta(meta); err != nil {
 		lg.Panic(err)
 	}
+
 	gen.flushed = true
 
 	gen.blockstore.glock.RLock()
-	//log.Printf("bs is %v, wlocks is %v", gen.blockstore, gen.blockstore._wlocks)
 	gen.blockstore._wlocks[UUIDToMapKey(*gen.Uuid())].Unlock()
 	gen.blockstore.glock.RUnlock()
 	return address_map, nil
@@ -264,20 +241,6 @@ func (bs *BlockStore) FreeVectorblock(vb **Vectorblock) {
 	*vb = nil
 }
 
-func (bs *BlockStore) DEBUG_DELETE_UUID(id uuid.UUID) {
-	lg.Info("DEBUG removing uuid '%v' from database", id.String())
-	_, err := bs.db.C("superblocks").RemoveAll(bson.M{"uuid": id.String()})
-	if err != nil && err != mgo.ErrNotFound {
-		lg.Panic(err)
-	}
-	if err == mgo.ErrNotFound {
-		lg.Info("Quey did not find supeblock to delete")
-	} else {
-		lg.Info("err was nik")
-	}
-	//bs.datablockBarrier()
-}
-
 func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation uint64, impl_Pointwidth uint8, impl_StartTime int64) Datablock {
 	//Try hit the cache first
 	db := bs.cacheGet(addr)
@@ -312,31 +275,24 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 	return nil
 }
 
-type fake_sblock struct {
-	Uuid     string
-	Gen      uint64
-	Root     uint64
-	Unlinked bool
-}
-
 // 从 MongoDB 中加载超级块信息
 func (bs *BlockStore) LoadSuperblock(id uuid.UUID, generation uint64) *Superblock {
-	var sb = fake_sblock{}
+	var (
+		meta *metaprovider.Meta
+		err  error
+	)
 	if generation == LatestGeneration {
-		//log.Info("loading superblock uuid=%v (lgen)", id.String())
-		qry := bs.db.C("superblocks").Find(bson.M{"uuid": id.String()}) // 不指定 generation 那就按照该键排序，选出最新的来
-		if err := qry.Sort("-gen").One(&sb); err != nil {
-			if err == mgo.ErrNotFound {
-				lg.Info("sb notfound!")
+		if meta, err = bs.meta.GetLatestMeta(id.String()); err != nil {
+			if err == metaprovider.MetaNotFound {
+				lg.Info("superblock not found!")
 				return nil
 			} else {
 				lg.Panic(err)
 			}
 		}
 	} else {
-		qry := bs.db.C("superblocks").Find(bson.M{"uuid": id.String(), "gen": generation}) // 否则根据此得到一个结果
-		if err := qry.One(&sb); err != nil {
-			if err == mgo.ErrNotFound {
+		if meta, err = bs.meta.GetMeta(id.String(), generation); err != nil {
+			if err == metaprovider.MetaNotFound {
 				return nil
 			} else {
 				lg.Panic(err)
@@ -345,35 +301,27 @@ func (bs *BlockStore) LoadSuperblock(id uuid.UUID, generation uint64) *Superbloc
 	}
 	rv := Superblock{
 		uuid:     id,
-		gen:      sb.Gen,
-		root:     sb.Root,
-		unlinked: sb.Unlinked,
+		gen:      meta.Version,
+		root:     meta.Root,
+		unlinked: meta.Unlinked,
 	}
 	return &rv
 }
 
 func CreateDatabase(params map[string]string) {
-	ses, err := mgo.Dial(params["mongoserver"])
-	if err != nil {
-		lg.Critical("Could not connect to mongo database", err)
-		os.Exit(1)
+	if params["metaprovider"] == "mysql" {
+		metaprovider.CreateMySQLMetaDatabase(params)
+	} else if params["metaprovider"] == "mongodb" {
+		metaprovider.CreateMongoDBMetaDatabase(params)
 	}
-	db := ses.DB(params["collection"])
-	idx := mgo.Index{
-		Key:        []string{"uuid", "-gen"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true,
-		Sparse:     false,
-	}
-	db.C("superblocks").EnsureIndex(idx)
+
 	if err := os.MkdirAll(params["dbpath"], 0755); err != nil {
 		lg.Panic(err)
 	}
 	fp := new(fileprovider.FileStorageProvider)
-	err = fp.CreateDatabase(params)
+	err := fp.CreateDatabase(params)
 	if err != nil {
-		lg.Critical("Error on create: %v", err)
+		lg.Criticalf("Error on create: %v", err)
 		os.Exit(1)
 	}
 }

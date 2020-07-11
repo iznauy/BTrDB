@@ -12,22 +12,18 @@ type Config struct {
 	GRPC struct {
 		Port    *int
 		Address *string
-		Enabled  bool
+		Enabled bool
 	}
-	Mongo struct {
-		Server     *string
-		Collection *string
+	Meta struct {
+		Provider          string
+		MongoDBServer     *string
+		MongoDBCollection *string
 	}
 	Storage struct {
-		Provider string
 		Filepath *string
-		Cephconf *string
-		Cephpool *string
 	}
 	Cache struct {
-		BlockCache      int
-		RadosWriteCache *int
-		RadosReadCache  *int
+		BlockCache int
 	}
 	Debug struct {
 		Cpuprofile  bool
@@ -65,37 +61,20 @@ func loadConfig() {
 		os.Exit(1)
 	}
 
-	if Configuration.Mongo.Server == nil || *Configuration.Mongo.Server == "" {
-		fmt.Printf("Aborting: configuration missing MongoDB server address\n")
-		os.Exit(1)
-	}
-	if Configuration.Mongo.Collection == nil || *Configuration.Mongo.Collection == "" {
-		fmt.Printf("Aborting: configuration missing MongoDB collection\n")
-		os.Exit(1)
-	}
+	if Configuration.Meta.Provider == "mysql" {
 
-	if Configuration.Storage.Provider == "file" {
-		if Configuration.Storage.Filepath == nil {
-			fmt.Printf("Aborting: using Files for storage, but no filepath specified\n")
+	} else if Configuration.Meta.Provider == "mongodb" {
+		if Configuration.Meta.MongoDBServer == nil {
+			fmt.Printf("Aborting: configuration missing MongoDB server address\n")
 			os.Exit(1)
 		}
-	} else if Configuration.Storage.Provider == "ceph" {
-		if Configuration.Storage.Cephconf == nil {
-			fmt.Printf("Aborting: using Ceph for storage, but no cephconf specified\n")
+		if Configuration.Meta.MongoDBCollection == nil {
+			fmt.Printf("Aborting: configuration missing MongoDB collection\n")
 			os.Exit(1)
 		}
 	} else {
-		fmt.Printf("Aborting: unknown storage provider specified\n")
+		fmt.Printf("Aborting: unknown meta provider specified\n")
 		os.Exit(1)
-	}
-
-	if Configuration.Cache.RadosWriteCache == nil {
-		z := 0
-		Configuration.Cache.RadosWriteCache = &z
-	}
-	if Configuration.Cache.RadosReadCache == nil {
-		z := 0
-		Configuration.Cache.RadosReadCache = &z
 	}
 
 	if Configuration.GRPC.Enabled && Configuration.GRPC.Port == nil {
@@ -119,19 +98,17 @@ func loadConfig() {
 	}
 
 	Params = map[string]string{
-		"mongoserver": *Configuration.Mongo.Server,
-		"provider":    Configuration.Storage.Provider,
-		"cachesize":   strconv.FormatInt(int64(Configuration.Cache.BlockCache), 10),
-		"collection":  *Configuration.Mongo.Collection,
+		"cachesize":    strconv.FormatInt(int64(Configuration.Cache.BlockCache), 10),
+		"metaprovider": Configuration.Meta.Provider,
+		"dbpath":       *Configuration.Storage.Filepath,
 	}
-	if Configuration.Storage.Provider == "ceph" {
-		Params["cephconf"] = *Configuration.Storage.Cephconf
-		Params["cephpool"] = *Configuration.Storage.Cephpool
-		Params["cephrcache"] = strconv.FormatInt(int64(*Configuration.Cache.RadosReadCache), 10)
-		Params["cephwcache"] = strconv.FormatInt(int64(*Configuration.Cache.RadosWriteCache), 10)
+
+	if Configuration.Meta.Provider == "mysql" {
+
 	}
-	if Configuration.Storage.Provider == "file" {
-		Params["dbpath"] = *Configuration.Storage.Filepath
+	if Configuration.Meta.Provider == "mongodb" {
+		Params["server"] = *Configuration.Meta.MongoDBServer
+		Params["collection"] = *Configuration.Meta.MongoDBCollection
 	}
 
 	fmt.Printf("Configuration OK!\n")
