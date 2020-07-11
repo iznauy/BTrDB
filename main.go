@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/iznauy/BTrDB/btrdbd"
+	"github.com/iznauy/BTrDB/grpcinterface"
 	"os"
 	"os/signal"
 	"runtime"
@@ -11,8 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/iznauy/BTrDB/cpinterface"
-	"github.com/iznauy/BTrDB/httpinterface"
 	"github.com/iznauy/BTrDB/inter/bstore"
 	"github.com/op/go-logging"
 )
@@ -73,11 +72,8 @@ func main() {
 		log.Panicf("error: ", err)
 	}
 
-	if Configuration.Http.Enabled {
-		go httpinterface.QuasarServeHTTP(q, *Configuration.Http.Address+":"+strconv.FormatInt(int64(*Configuration.Http.Port), 10))
-	}
-	if Configuration.Capnp.Enabled {
-		go cpinterface.ServeCPNP(q, "tcp", *Configuration.Capnp.Address+":"+strconv.FormatInt(int64(*Configuration.Capnp.Port), 10))
+	if Configuration.GRPC.Enabled {
+		go grpcinterface.ServeGRPC(q, *Configuration.GRPC.Address+":"+strconv.FormatInt(int64(*Configuration.Http.Port), 10))
 	}
 
 	if Configuration.Debug.Heapprofile {

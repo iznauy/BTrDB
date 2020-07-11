@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "github.com/iznauy/BTrDB/grpcinterface";
+
+package grpcinterface;
+
+message TestConnectionRequest {
+}
+
+message TestConnectionResponse {
+    bool success = 1;
+}
+
+service BTrDB {
+    rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+}

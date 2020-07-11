@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	gcfg "gopkg.in/gcfg.v1"
+	"gopkg.in/gcfg.v1"
 )
 
 type Config struct {
@@ -18,6 +18,11 @@ type Config struct {
 		Port    *int
 		Address *string
 		Enabled bool
+	}
+	GRPC struct {
+		Port    *int
+		Address *string
+		Enabled  bool
 	}
 	Mongo struct {
 		Server     *string
@@ -120,6 +125,16 @@ func loadConfig() {
 
 	if Configuration.Capnp.Enabled && Configuration.Capnp.Address == nil {
 		fmt.Printf("Aborting: capn proto server enabled, but no address specified\n")
+		os.Exit(1)
+	}
+
+	if Configuration.GRPC.Enabled && Configuration.GRPC.Port == nil {
+		fmt.Printf("Aborting: grpc server enabled, but no port specified\n")
+		os.Exit(1)
+	}
+
+	if Configuration.GRPC.Enabled && Configuration.GRPC.Address == nil {
+		fmt.Printf("Aborting: grpc server enabled, but no address specified\n")
 		os.Exit(1)
 	}
 
