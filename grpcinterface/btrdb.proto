@@ -13,6 +13,7 @@ message TestConnectionResponse {
 
 service BTrDB {
     rpc Insert (InsertRequest) returns (InsertResponse);
+    rpc BatchInsert (BatchInsertRequest) returns (BatchInsertResponse);
     rpc Delete (DeleteRequest) returns (DeleteResponse);
     rpc QueryRange (QueryRangeRequest) returns (QueryRangeResponse);
     rpc QueryNearestValue (QueryNearestValueRequest) returns (QueryNearestValueResponse);
@@ -39,6 +40,14 @@ message InsertRequest {
 }
 
 message InsertResponse {
+    Status status = 1;
+}
+
+message BatchInsertRequest {
+    repeated InsertRequest inserts = 1;
+}
+
+message BatchInsertResponse {
     Status status = 1;
 }
 

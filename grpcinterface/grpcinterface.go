@@ -79,6 +79,48 @@ func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*Insert
 	}, nil
 }
 
+func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRequest) (*BatchInsertResponse, error) {
+	recordsMap := make(map[string][]qtree.Record, len(batchReq.Inserts))
+	for _, req := range batchReq.Inserts {
+		records := make([]qtree.Record, 0, len(req.Values))
+		for _, val := range req.Values {
+			if val == nil {
+				continue
+			}
+			record := qtree.Record{
+				Time: val.Time,
+				Val:  val.Value,
+			}
+			if !checkTime(record.Time) {
+				return &BatchInsertResponse{
+					Status: ErrBadTimes,
+				}, nil
+			}
+			records = append(records, record)
+		}
+		_, err := uuid.ParseBytes(req.Uuid)
+		if err != nil {
+			log.Fatal("[Insert] invalid uuid: %v", err)
+			return &BatchInsertResponse{
+				Status: ErrBadUUID,
+			}, nil
+		}
+		recordsMap[string(req.Uuid)] = records
+	}
+
+	go func(recordsMap map[string][]qtree.Record) { // 完全异步化，试试效果
+		for uid, records := range recordsMap {
+			id := uuid.Parse(uid)
+			g.q.InsertValues(id, records)
+		}
+	}(recordsMap)
+
+	return &BatchInsertResponse{
+		Status: Success,
+	}, nil
+}
+
+
 func (g *GRPCInterface) Delete(ctx context.Context, req *DeleteRequest) (*DeleteResponse, error) {
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
