@@ -154,7 +154,7 @@ func (bs *BlockStore) ObtainGeneration(id uuid.UUID) *Generation {
 		lg.Infof("no superblock found for %v", id.String())
 		gen.Cur_SB = NewSuperblock(id)
 	} else if err != nil {
-		lg.Panic("meta provider error: %v", err)
+		lg.Panicf("meta provider error: %v", err)
 	} else {
 		sb := Superblock{
 			uuid: id,

@@ -16,7 +16,7 @@ func init() {
 	log = logging.MustGetLogger("log")
 }
 
-const NUMFILES = 256
+const NUMFILES = 4096
 
 type writeparams struct {
 	Address uint64

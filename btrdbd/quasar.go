@@ -2,6 +2,7 @@ package btrdbd
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -149,7 +150,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		tr.sigEC = make(chan bool, 1)
 		//Also spawn the coalesce timeout goroutine
 		go func(abrt chan bool) {
-			tmt := time.After(time.Duration(q.cfg.TransactionCoalesceInterval) * time.Millisecond)
+			tmt := time.After(time.Duration((q.cfg.TransactionCoalesceInterval >> 1) + rand.Uint64() % q.cfg.TransactionCoalesceInterval) * time.Millisecond)
 			select {
 			case <-tmt:
 				//do coalesce
