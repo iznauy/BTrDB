@@ -25,3 +25,8 @@ type MetaProvider interface {
 	GetLatestMeta(id string) (*Meta, error)
 	InsertMeta(meta *Meta) error
 }
+
+type BatchInsertMetaProvider interface {
+	MetaProvider
+	BatchInsertMeta(metaList []*Meta) error
+}

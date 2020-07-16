@@ -92,6 +92,12 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 			lg.Panicf("init mongodb metaprovider error: %v", err)
 		}
 		bs.meta = meta
+	} else if params["metaprovider"] == "mem" {
+		meta, err := metaprovider.NewMemMetaProvider(params);
+		if err != nil {
+			lg.Panicf("init mem metaprovider error: %v", err)
+		}
+		bs.meta = meta
 	}
 
 	bs._wlocks = make(map[[16]byte]*sync.Mutex)
@@ -151,7 +157,6 @@ func (bs *BlockStore) ObtainGeneration(id uuid.UUID) *Generation {
 
 	meta, err := bs.meta.GetLatestMeta(id.String())
 	if err == metaprovider.MetaNotFound {
-		lg.Infof("no superblock found for %v", id.String())
 		gen.Cur_SB = NewSuperblock(id)
 	} else if err != nil {
 		lg.Panicf("meta provider error: %v", err)

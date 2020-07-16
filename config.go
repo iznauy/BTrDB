@@ -21,6 +21,7 @@ type Config struct {
 		MySQLUser         *string
 		MySQLPassword     *string
 		MySQLDBName       *string
+		UseCache          *string
 	}
 	Storage struct {
 		Filepath *string
@@ -86,6 +87,8 @@ func loadConfig() {
 			fmt.Printf("Aborting: configuration missing MongoDB collection\n")
 			os.Exit(1)
 		}
+	} else if Configuration.Meta.Provider == "mem" {
+
 	} else {
 		fmt.Printf("Aborting: unknown meta provider specified\n")
 		os.Exit(1)
@@ -114,6 +117,7 @@ func loadConfig() {
 	Params = map[string]string{
 		"cachesize":    strconv.FormatInt(int64(Configuration.Cache.BlockCache), 10),
 		"metaprovider": Configuration.Meta.Provider,
+		"useCache":     *Configuration.Meta.UseCache,
 		"dbpath":       *Configuration.Storage.Filepath,
 	}
 

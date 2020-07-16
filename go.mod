@@ -3,6 +3,7 @@ module github.com/iznauy/BTrDB
 go 1.12
 
 require (
+	github.com/cespare/xxhash v1.1.0
 	github.com/golang/protobuf v1.4.2
 	github.com/jinzhu/gorm v1.9.14
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
