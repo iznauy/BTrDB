@@ -3,11 +3,10 @@ package qtree
 import (
 	"errors"
 	"fmt"
-	"math"
-	"sort"
-
 	"github.com/iznauy/BTrDB/inter/bstore"
 	"github.com/op/go-logging"
+	"math"
+	"sort"
 )
 
 var log *logging.Logger

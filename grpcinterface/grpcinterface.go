@@ -120,7 +120,6 @@ func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRe
 	}, nil
 }
 
-
 func (g *GRPCInterface) Delete(ctx context.Context, req *DeleteRequest) (*DeleteResponse, error) {
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
@@ -192,15 +191,59 @@ func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearest
 	}
 	record, version, err := g.q.QueryNearestValue(id, req.Time, req.Backwards, version)
 	if err != nil {
-		return nil, nil
+		return &QueryNearestValueResponse{
+			Status: &Status{
+				Code: -1,
+				Msg:  err.Error(),
+			},
+		}, nil
 	}
 	return &QueryNearestValueResponse{
-		Status:Success,
+		Status:  Success,
 		Version: version,
 		Value: &RawPoint{
-			Time: record.Time,
+			Time:  record.Time,
 			Value: record.Val,
 		},
+	}, nil
+}
+
+func (g *GRPCInterface) QueryStatistics(ctx context.Context, req *QueryStatisticsRequest) (*QueryStatisticsResponse, error) {
+	id, err := uuid.ParseBytes(req.Uuid)
+	if err != nil {
+		log.Fatal("[QueryNearestValue] invalid uuid: %v", err)
+		return &QueryStatisticsResponse{
+			Status: ErrBadUUID,
+		}, nil
+	}
+	version := req.Version
+	if version == 0 {
+		version = btrdb2.LatestGeneration
+	}
+	records, version, err := g.q.QueryStatisticalValues(id, req.Start, req.End, version, uint8(req.Resolution))
+	if err != nil {
+		return &QueryStatisticsResponse{
+			Status: &Status{
+				Code: -1,
+				Msg:  err.Error(),
+			},
+		}, nil
+	}
+	statistics := make([]*Statistics, 0, len(records))
+	for _, record := range records {
+		statistic := &Statistics{
+			Start: record.Time,
+			End:   record.Time + (1 << req.Resolution),
+			Max:   record.Max,
+			Min:   record.Min,
+			Mean:  record.Mean,
+		}
+		statistics = append(statistics, statistic)
+	}
+	return &QueryStatisticsResponse{
+		Status:     Success,
+		Version:    version,
+		Statistics: statistics,
 	}, nil
 }
 

@@ -17,6 +17,7 @@ service BTrDB {
     rpc Delete (DeleteRequest) returns (DeleteResponse);
     rpc QueryRange (QueryRangeRequest) returns (QueryRangeResponse);
     rpc QueryNearestValue (QueryNearestValueRequest) returns (QueryNearestValueResponse);
+    rpc QueryStatistics (QueryStatisticsRequest) returns (QueryStatisticsResponse);
 }
 
 message RawPoint {
@@ -75,6 +76,29 @@ message QueryNearestValueResponse {
     Status status = 1;
     uint64 version = 2;
     RawPoint value = 3;
+}
+
+message QueryStatisticsRequest {
+    bytes uuid = 1;
+    sfixed64 start = 2;
+    sfixed64 end = 3;
+    uint64 version = 4;
+    uint32 resolution = 5;
+}
+
+message QueryStatisticsResponse {
+    Status status = 1;
+    uint64 version = 2;
+    repeated Statistics statistics = 3;
+}
+
+message Statistics {
+    sfixed64 start = 1;
+    sfixed64 end = 2;
+    uint64 count = 3;
+    double min = 4;
+    double max = 5;
+    double mean = 6;
 }
 
 message Status {
