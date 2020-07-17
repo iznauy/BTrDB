@@ -2,6 +2,7 @@ package btrdbd
 
 import (
 	"fmt"
+	"github.com/cespare/xxhash"
 	"math/rand"
 	"sync"
 	"time"
@@ -18,10 +19,57 @@ func init() {
 	log = logging.MustGetLogger("log")
 }
 
-type openTree struct { // 缓冲区
+type openTree struct {
+	// 缓冲区
 	store []qtree.Record
 	id    uuid.UUID
 	sigEC chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
+}
+
+type forest struct {
+	mu        sync.RWMutex             // 全局锁
+	treeLocks map[[16]byte]*sync.Mutex // 🌲锁
+	openTrees map[[16]byte]*openTree   // 每个时间序列对应自己的缓冲区
+}
+
+func (f *forest) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
+	mk := bstore.UUIDToMapKey(id)
+	f.mu.RLock()
+	ot, ok := f.openTrees[mk]
+	if !ok {
+		f.mu.RUnlock()
+		f.mu.Lock()
+		if ot, ok := f.openTrees[mk]; ok {
+			mtx, _ := f.treeLocks[mk]
+			f.mu.Unlock()
+			return ot, mtx
+		}
+		ot := newOpenTree(id)
+		mtx := &sync.Mutex{}
+		f.openTrees[mk] = ot
+		f.treeLocks[mk] = mtx
+		f.mu.Unlock()
+		return ot, mtx
+	}
+	mtx, _ := f.treeLocks[mk]
+	f.mu.RUnlock()
+	return ot, mtx
+}
+
+func (f *forest) isPending() bool {
+	isPend := false
+	f.mu.Lock()
+	for uuid, ot := range f.openTrees {
+		f.treeLocks[uuid].Lock()
+		if len(ot.store) != 0 {
+			isPend = true
+			f.treeLocks[uuid].Unlock()
+			break
+		}
+		f.treeLocks[uuid].Unlock()
+	}
+	f.mu.Unlock()
+	return isPend
 }
 
 const MinimumTime = -(16 << 56)
@@ -31,11 +79,7 @@ const LatestGeneration = bstore.LatestGeneration
 type Quasar struct {
 	cfg QuasarConfig
 	bs  *bstore.BlockStore
-
-	//Transaction coalescence
-	globlock  sync.Mutex // 全局锁
-	treelocks map[[16]byte]*sync.Mutex // 🌲锁
-	openTrees map[[16]byte]*openTree  // 每个时间序列对应自己的缓冲区
+	forests []*forest
 }
 
 func newOpenTree(id uuid.UUID) *openTree {
@@ -53,9 +97,11 @@ type QuasarConfig struct {
 	//with a commit every Interval millis
 	//If the number of stored values exceeds
 	//EarlyTrip
-	TransactionCoalesceEnable    bool // 是否开启 TransactionCoalesce
+	TransactionCoalesceEnable    bool   // 是否开启 TransactionCoalesce
 	TransactionCoalesceInterval  uint64 // 必须要提交的时间间隔
 	TransactionCoalesceEarlyTrip uint64 // 必须要提交的点的数量
+
+	ForestCount uint64
 
 	Params map[string]string
 }
@@ -65,17 +111,12 @@ type QuasarConfig struct {
 // Should only be used during shutdown as it hogs the glock
 func (q *Quasar) IsPending() bool {
 	isPend := false
-	q.globlock.Lock()
-	for uuid, ot := range q.openTrees {
-		q.treelocks[uuid].Lock()
-		if len(ot.store) != 0 {
+	for _, f := range q.forests {
+		if f != nil && f.isPending() {
 			isPend = true
-			q.treelocks[uuid].Unlock()
 			break
 		}
-		q.treelocks[uuid].Unlock()
 	}
-	q.globlock.Unlock()
 	return isPend
 }
 
@@ -84,34 +125,24 @@ func NewQuasar(cfg *QuasarConfig) (*Quasar, error) {
 	if err != nil {
 		return nil, err
 	}
+	forests := make([]*forest, cfg.ForestCount)
+	for i := 0; i < len(forests); i++ {
+		forests[i] = &forest{
+			openTrees: make(map[[16]byte]*openTree, 128),
+			treeLocks: make(map[[16]byte]*sync.Mutex, 128),
+		}
+	}
 	rv := &Quasar{
-		cfg:       *cfg,
-		bs:        bs,
-		openTrees: make(map[[16]byte]*openTree, 128),
-		treelocks: make(map[[16]byte]*sync.Mutex, 128),
+		cfg:     *cfg,
+		bs:      bs,
+		forests: forests,
 	}
 	return rv, nil
 }
 
 // 获取某个树的缓冲区及其对应的锁
 func (q *Quasar) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
-	mk := bstore.UUIDToMapKey(id)
-	q.globlock.Lock()
-	ot, ok := q.openTrees[mk]
-	if !ok {
-		ot := newOpenTree(id)
-		mtx := &sync.Mutex{}
-		q.openTrees[mk] = ot
-		q.treelocks[mk] = mtx
-		q.globlock.Unlock()
-		return ot, mtx
-	}
-	mtx, ok := q.treelocks[mk]
-	if !ok {
-		log.Panicf("This should not happen")
-	}
-	q.globlock.Unlock()
-	return ot, mtx
+	return q.forests[xxhash.Sum64String(id.String()) % q.cfg.ForestCount].getTree(id)
 }
 
 // 提交缓冲区中的数据
@@ -150,7 +181,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		tr.sigEC = make(chan bool, 1)
 		//Also spawn the coalesce timeout goroutine
 		go func(abrt chan bool) {
-			tmt := time.After(time.Duration((q.cfg.TransactionCoalesceInterval >> 1) + rand.Uint64() % q.cfg.TransactionCoalesceInterval) * time.Millisecond)
+			tmt := time.After(time.Duration((q.cfg.TransactionCoalesceInterval>>1)+rand.Uint64()%q.cfg.TransactionCoalesceInterval) * time.Millisecond)
 			select {
 			case <-tmt:
 				//do coalesce

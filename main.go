@@ -65,6 +65,7 @@ func main() {
 		TransactionCoalesceEnable:    true,
 		TransactionCoalesceInterval:  uint64(*Configuration.Coalescence.Interval),
 		TransactionCoalesceEarlyTrip: uint64(*Configuration.Coalescence.Earlytrip),
+		ForestCount:                  uint64(*Configuration.Forest.Count),
 		Params:                       Params,
 	}
 	q, err := btrdbd.NewQuasar(&cfg)

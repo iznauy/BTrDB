@@ -37,6 +37,9 @@ type Config struct {
 		Earlytrip *int
 		Interval  *int
 	}
+	Forest struct {
+		Count *int
+	}
 }
 
 var Configuration Config
@@ -111,6 +114,14 @@ func loadConfig() {
 
 	if Configuration.Coalescence.Interval == nil {
 		fmt.Printf("Aborting: transaction coalescence commit interval not set\n")
+		os.Exit(1)
+	}
+
+	if Configuration.Forest.Count == nil {
+		fmt.Printf("Aborting: forest count not set\n")
+		os.Exit(1)
+	} else if *Configuration.Forest.Count <= 0 {
+		fmt.Printf("Aborting: forest count must be positive number\n")
 		os.Exit(1)
 	}
 
