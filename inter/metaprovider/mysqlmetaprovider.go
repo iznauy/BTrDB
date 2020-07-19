@@ -59,6 +59,8 @@ func NewMySQLMetaProvider(params map[string]string) (*MySQLMetaProvider, error) 
 	if err != nil {
 		return nil, err
 	}
+	db.DB().SetMaxOpenConns(300)
+	db.DB().SetMaxIdleConns(200)
 	provider.db = db
 	provider.useCache = params["usecache"] == "true"
 	if provider.useCache {

@@ -46,7 +46,8 @@ func ServeGRPC(q *btrdb2.Quasar, addr string) {
 	if err != nil {
 		panic(err)
 	}
-	grpcServer := grpc.NewServer()
+	maxSize := 40 * 1024 * 1024 // 最大消息为 40M，这样一次可以传输上百万个数据点
+	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(maxSize), grpc.MaxSendMsgSize(maxSize))
 	RegisterBTrDBServer(grpcServer, &GRPCInterface{
 		q: q,
 	})

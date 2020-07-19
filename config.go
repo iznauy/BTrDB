@@ -34,6 +34,7 @@ type Config struct {
 		Heapprofile bool
 	}
 	Coalescence struct {
+		Enable    bool
 		Earlytrip *int
 		Interval  *int
 	}
@@ -107,12 +108,12 @@ func loadConfig() {
 		os.Exit(1)
 	}
 
-	if Configuration.Coalescence.Earlytrip == nil {
+	if Configuration.Coalescence.Enable && Configuration.Coalescence.Earlytrip == nil {
 		fmt.Printf("Aborting: transaction coalescence early trip object count not set\n")
 		os.Exit(1)
 	}
 
-	if Configuration.Coalescence.Interval == nil {
+	if Configuration.Coalescence.Enable && Configuration.Coalescence.Interval == nil {
 		fmt.Printf("Aborting: transaction coalescence commit interval not set\n")
 		os.Exit(1)
 	}

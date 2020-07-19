@@ -62,11 +62,13 @@ func main() {
 	runtime.GOMAXPROCS(nCPU)
 	cfg := btrdbd.QuasarConfig{
 		DatablockCacheSize:           uint64(Configuration.Cache.BlockCache),
-		TransactionCoalesceEnable:    true,
-		TransactionCoalesceInterval:  uint64(*Configuration.Coalescence.Interval),
-		TransactionCoalesceEarlyTrip: uint64(*Configuration.Coalescence.Earlytrip),
+		TransactionCoalesceEnable:    Configuration.Coalescence.Enable,
 		ForestCount:                  uint64(*Configuration.Forest.Count),
 		Params:                       Params,
+	}
+	if Configuration.Coalescence.Enable {
+		cfg.TransactionCoalesceInterval = uint64(*Configuration.Coalescence.Interval)
+		cfg.TransactionCoalesceEarlyTrip = uint64(*Configuration.Coalescence.Earlytrip)
 	}
 	q, err := btrdbd.NewQuasar(&cfg)
 	if err != nil {

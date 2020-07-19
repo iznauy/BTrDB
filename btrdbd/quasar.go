@@ -175,6 +175,12 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 	if tr == nil {
 		log.Panicf("This should not happen")
 	}
+	if !q.cfg.TransactionCoalesceEnable {
+		tr.store = r
+		tr.commit(q)
+		mtx.Unlock()
+		return
+	}
 	if tr.store == nil {
 		//Empty store
 		tr.store = make([]qtree.Record, 0, len(r)*2)
