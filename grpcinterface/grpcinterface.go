@@ -48,6 +48,12 @@ type GRPCInterface struct {
 }
 
 func ServeGRPC(q *btrdb2.Quasar, addr string) {
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			fmt.Println("Num BatchInsert In Process: ", batchInsertInProcess)
+		}
+	}()
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
@@ -60,12 +66,6 @@ func ServeGRPC(q *btrdb2.Quasar, addr string) {
 	if err := grpcServer.Serve(l); err != nil {
 		log.Fatalf("fail to serve: %v", err)
 	}
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			fmt.Println("Num BatchInsert In Process: ", batchInsertInProcess)
-		}
-	}()
 }
 
 func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*InsertResponse, error) {
