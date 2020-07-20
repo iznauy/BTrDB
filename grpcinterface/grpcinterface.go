@@ -3,6 +3,7 @@ package grpcinterface
 import (
 	"context"
 	"errors"
+	"fmt"
 	btrdb2 "github.com/iznauy/BTrDB/btrdbd"
 	"github.com/iznauy/BTrDB/qtree"
 	"github.com/op/go-logging"
@@ -10,6 +11,9 @@ import (
 	"google.golang.org/grpc"
 	"math"
 	"net"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 var log *logging.Logger
@@ -17,6 +21,8 @@ var log *logging.Logger
 func init() {
 	log = logging.MustGetLogger("log")
 }
+
+var batchInsertInProcess int32 = 0
 
 var Success = &Status{
 	Code: 0,
@@ -54,6 +60,12 @@ func ServeGRPC(q *btrdb2.Quasar, addr string) {
 	if err := grpcServer.Serve(l); err != nil {
 		log.Fatalf("fail to serve: %v", err)
 	}
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			fmt.Println("Num BatchInsert In Process: ", batchInsertInProcess)
+		}
+	}()
 }
 
 func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*InsertResponse, error) {
@@ -86,7 +98,7 @@ func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*Insert
 	}, nil
 }
 
-func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest) { // 同步方法
+func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGroup) { // 同步方法
 	recordsMap := make(map[string][]qtree.Record, len(insertReqs))
 	for _, req := range insertReqs {
 		records := make([]qtree.Record, 0, len(req.Values))
@@ -106,6 +118,7 @@ func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest) { // 同步方�
 		id := uuid.Parse(uid)
 		g.q.InsertValues(id, records)
 	}
+	w.Done()
 }
 
 func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRequest) (*BatchInsertResponse, error) {
@@ -143,9 +156,16 @@ func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRe
 		batches = append(batches, batchReq.Inserts[from:to])
 	}
 
-	for _, batch := range batches {
-		go g.batchInsert(batch)
-	}
+	go func() {
+		atomic.AddInt32(&batchInsertInProcess, 1)
+		var w sync.WaitGroup
+		for _, batch := range batches {
+			w.Add(1)
+			go g.batchInsert(batch, &w)
+		}
+		w.Wait()
+		atomic.AddInt32(&batchInsertInProcess, -1)
+	}()
 
 	return &BatchInsertResponse{
 		Status: Success,
@@ -210,6 +230,7 @@ func (g *GRPCInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) 
 }
 
 func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearestValueRequest) (*QueryNearestValueResponse, error) {
+	log.Infof("[QueryNearestValue] req=%v", req)
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
 		log.Fatal("[QueryNearestValue] invalid uuid: %v", err)
@@ -241,9 +262,10 @@ func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearest
 }
 
 func (g *GRPCInterface) QueryStatistics(ctx context.Context, req *QueryStatisticsRequest) (*QueryStatisticsResponse, error) {
+	log.Infof("[QueryStatistics] req=%v", req)
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
-		log.Fatal("[QueryNearestValue] invalid uuid: %v", err)
+		log.Fatalf("[QueryStatistics] invalid uuid: %v, len(uuid)=%d", err, len(req.Uuid))
 		return &QueryStatisticsResponse{
 			Status: ErrBadUUID,
 		}, nil
