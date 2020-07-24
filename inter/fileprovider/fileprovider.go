@@ -2,12 +2,11 @@ package fileprovider
 
 import (
 	"fmt"
+	"github.com/iznauy/BTrDB/inter/bprovider"
+	"github.com/op/go-logging"
 	"io"
 	"os"
 	"sync"
-
-	"github.com/iznauy/BTrDB/inter/bprovider"
-	"github.com/op/go-logging"
 )
 
 var log *logging.Logger
@@ -104,6 +103,46 @@ func (seg *FileProviderSegment) Flush() {
 	seg.wg.Wait()
 }
 
+// provideFiles 高性能实现
+func (sp *FileStorageProvider) provideFilesV2() {
+	available := NUMFILES
+	for {
+	loop:
+		for {
+			select {
+			case fi := <-sp.retfidx:
+				sp.favail[fi] = true
+				available += 1
+			default:
+				break loop
+			}
+		}
+		for i := 0; i < NUMFILES; i++ {
+			if !sp.favail[i] {
+				continue
+			}
+			available -= 1
+			sp.favail[i] = false
+			sp.fidx <- i
+		inner:
+			for {
+				select {
+				case fi := <-sp.retfidx:
+					sp.favail[fi] = true
+					available += 1
+				default:
+					break inner
+				}
+			}
+		}
+		if available < NUMFILES {
+			fi := <-sp.retfidx
+			sp.favail[fi] = true
+			available += 1
+		}
+	}
+}
+
 //Provide file indices into fidx, does not return
 func (sp *FileStorageProvider) provideFiles() {
 	for {
@@ -187,7 +226,7 @@ func (sp *FileStorageProvider) Initialize(opts map[string]string) {
 		}
 		sp.favail[i] = true
 	}
-	go sp.provideFiles()
+	go sp.provideFilesV2()
 
 }
 
