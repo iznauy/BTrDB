@@ -39,7 +39,7 @@ func toMeta(m *meta) *Meta {
 }
 
 func CreateMySQLMetaDatabase(params map[string]string) {
-	db, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local",
+	db, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local",
 		params["user"], params["password"], params["dbname"]))
 	if err != nil {
 		lg.Panicf("connect to mysql error: %v", err)
@@ -54,7 +54,7 @@ func CreateMySQLMetaDatabase(params map[string]string) {
 
 func NewMySQLMetaProvider(params map[string]string) (*MySQLMetaProvider, error) {
 	provider := &MySQLMetaProvider{}
-	db, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local",
+	db, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local",
 		params["user"], params["password"], params["dbname"]))
 	if err != nil {
 		return nil, err
