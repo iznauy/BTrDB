@@ -17,9 +17,9 @@ const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const ROOTPW = 56 //This makes each bucket at the root ~= 2.2 years
 //so the root spans 146.23 years
-const ROOTSTART = -1152921504606846976 //This makes the 16th bucket start at 1970 (0)
-const MinimumTime = -(16 << 56)
-const MaximumTime = (48 << 56)
+const ROOTSTART = 0 //This makes the 16th bucket start at 1970 (0)
+const MinimumTime = 0
+const MaximumTime = 64 << 56
 
 type QTree struct {
 	sb       *bstore.Superblock // 超级块 super block

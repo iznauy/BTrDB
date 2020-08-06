@@ -19,6 +19,14 @@ func init() {
 	log = logging.MustGetLogger("log")
 }
 
+
+var (
+	span time.Duration
+	times int64
+	mu sync.Mutex
+)
+
+
 type openTree struct {
 	// 缓冲区
 	store []qtree.Record
@@ -72,8 +80,8 @@ func (f *forest) isPending() bool {
 	return isPend
 }
 
-const MinimumTime = -(16 << 56)
-const MaximumTime = (48 << 56)
+const MinimumTime = 0
+const MaximumTime = 64 << 56
 const LatestGeneration = bstore.LatestGeneration
 
 type Quasar struct {
@@ -170,7 +178,18 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 			log.Error("BAD INSERT: ", r)
 		}
 	}()
+	start := time.Now()
 	tr, mtx := q.getTree(id)
+	localSpan := time.Now().Sub(start)
+	mu.Lock()
+	span += localSpan
+	times++
+	if times % 1000 == 0 {
+		fmt.Println("最近1000次加载 write tree，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+		times = 0
+		span = 0
+	}
+	mu.Unlock()
 	mtx.Lock()
 	if tr == nil {
 		log.Panicf("This should not happen")

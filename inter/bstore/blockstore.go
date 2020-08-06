@@ -2,10 +2,12 @@ package bstore
 
 import (
 	"errors"
+	"fmt"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/iznauy/BTrDB/inter/bprovider"
 	"github.com/iznauy/BTrDB/inter/fileprovider"
@@ -13,6 +15,13 @@ import (
 )
 
 const LatestGeneration = uint64(^(uint64(0)))
+
+var (
+	span time.Duration
+	times int64
+	mu sync.Mutex
+)
+
 
 // 将 uuid 转化成比特数组
 func UUIDToMapKey(id uuid.UUID) [16]byte {
@@ -183,7 +192,18 @@ func (gen *Generation) Commit() (map[uint64]uint64, error) {
 
 	//then := time.Now()
 	// 写入底层存储
+	start := time.Now()
 	address_map := LinkAndStore([]byte(*gen.Uuid()), gen.blockstore, gen.blockstore.store, gen.vblocks, gen.cblocks)
+	localSpan := time.Now().Sub(start)
+	mu.Lock()
+	span += localSpan
+	times += 1
+	if times % 1000 == 0 {
+		fmt.Println("最近1000次数据持久化，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+		times = 0
+		span = 0
+	}
+	mu.Unlock()
 	// 写元信息到 mongodb
 	rootaddr, ok := address_map[gen.New_SB.root]
 	if !ok {

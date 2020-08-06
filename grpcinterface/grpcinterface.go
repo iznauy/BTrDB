@@ -24,6 +24,12 @@ func init() {
 
 var batchInsertInProcess int32 = 0
 
+var (
+	span time.Duration
+	times int64
+	mu sync.Mutex
+)
+
 var Success = &Status{
 	Code: 0,
 	Msg:  "",
@@ -58,7 +64,7 @@ func ServeGRPC(q *btrdb2.Quasar, addr string) {
 	if err != nil {
 		panic(err)
 	}
-	maxSize := 40 * 1024 * 1024 // 最大消息为 40M，这样一次可以传输上百万个数据点
+	maxSize := 200 * 1024 * 1024 // 最大消息为 40M，这样一次可以传输上百万个数据点
 	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(maxSize), grpc.MaxSendMsgSize(maxSize))
 	RegisterBTrDBServer(grpcServer, &GRPCInterface{
 		q: q,
@@ -116,7 +122,18 @@ func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 	}
 	for uid, records := range recordsMap {
 		id := uuid.Parse(uid)
+		start := time.Now()
 		g.q.InsertValues(id, records)
+		localSpan := time.Now().Sub(start)
+		mu.Lock()
+		span += localSpan
+		times += 1
+		if times % 1000 == 0 {
+			fmt.Println("最近1000次数据点插入，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+			times = 0
+			span = 0
+		}
+		mu.Unlock()
 	}
 	w.Done()
 }
@@ -149,23 +166,21 @@ func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRe
 
 	for i := 0; i < batchCount; i++ {
 		from := i * 100
-		to := (i + 1) * 100
+		to := from + 100
 		if to > len(batchReq.Inserts) {
 			to = len(batchReq.Inserts)
 		}
 		batches = append(batches, batchReq.Inserts[from:to])
 	}
 
-	go func() {
-		atomic.AddInt32(&batchInsertInProcess, 1)
-		var w sync.WaitGroup
-		for _, batch := range batches {
-			w.Add(1)
-			go g.batchInsert(batch, &w)
-		}
-		w.Wait()
-		atomic.AddInt32(&batchInsertInProcess, -1)
-	}()
+	atomic.AddInt32(&batchInsertInProcess, 1)
+	var w sync.WaitGroup
+	for _, batch := range batches {
+		w.Add(1)
+		go g.batchInsert(batch, &w)
+	}
+	w.Wait()
+	atomic.AddInt32(&batchInsertInProcess, -1)
 
 	return &BatchInsertResponse{
 		Status: Success,

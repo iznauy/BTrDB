@@ -5,8 +5,10 @@ import (
 	"github.com/iznauy/BTrDB/inter/bprovider"
 	"github.com/op/go-logging"
 	"io"
+	"math/rand"
 	"os"
 	"sync"
+	"time"
 )
 
 var log *logging.Logger
@@ -15,7 +17,14 @@ func init() {
 	log = logging.MustGetLogger("log")
 }
 
-const NUMFILES = 4096
+var (
+	span time.Duration
+	times int64
+	mu sync.Mutex
+)
+
+
+const NUMFILES = 256
 
 type writeparams struct {
 	Address uint64
@@ -117,13 +126,14 @@ func (sp *FileStorageProvider) provideFilesV2() {
 				break loop
 			}
 		}
+		base := rand.Intn(NUMFILES)
 		for i := 0; i < NUMFILES; i++ {
-			if !sp.favail[i] {
+			if !sp.favail[(base + i) % NUMFILES] {
 				continue
 			}
 			available -= 1
-			sp.favail[i] = false
-			sp.fidx <- i
+			sp.favail[(base + i) % NUMFILES] = false
+			sp.fidx <- (base + i) % NUMFILES
 		inner:
 			for {
 				select {
@@ -234,7 +244,18 @@ func (sp *FileStorageProvider) Initialize(opts map[string]string) {
 // Returns a Segment struct
 func (sp *FileStorageProvider) LockSegment(uuid []byte) bprovider.Segment {
 	//Grab a file index
+	start := time.Now()
 	fidx := <-sp.fidx
+	localSpan := time.Now().Sub(start)
+	mu.Lock()
+	span += localSpan
+	times++
+	if times % 1000 == 0 {
+		fmt.Println("最近1000次获取文件锁，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+		times = 0
+		span = 0
+	}
+	mu.Unlock()
 	f := sp.dbf[fidx]
 	l, err := f.Seek(0, os.SEEK_END)
 	if err != nil {
