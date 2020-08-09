@@ -10,7 +10,7 @@ import (
 
 var ser_buf_pool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, DBSIZE)
+		return make([]byte, GetDBSize())
 	},
 }
 
@@ -72,7 +72,7 @@ func LinkAndStore(uuid []byte, bs *BlockStore, bp bprovider.StorageProvider, vbl
 		cb := cblocks[i]
 
 		//Relocate and backpatch
-		for k := 0; k < KFACTOR; k++ {
+		for k := 0; k < GetKFactor(); k++ {
 			if cb.Addr[k] < RELOCATION_BASE {
 				continue
 			}

@@ -7,8 +7,6 @@ import (
 	"github.com/pborman/uuid"
 )
 
-const PWFACTOR = bstore.PWFACTOR
-const KFACTOR = bstore.KFACTOR
 const MICROSECOND = 1000
 const MILLISECOND = 1000 * MICROSECOND
 const SECOND = 1000 * MILLISECOND
@@ -39,7 +37,7 @@ type QTreeNode struct {
 	vector_block *bstore.Vectorblock
 	core_block   *bstore.Coreblock
 	isLeaf       bool
-	child_cache  [bstore.KFACTOR]*QTreeNode
+	child_cache  []*QTreeNode
 	parent       *QTreeNode
 	isNew        bool
 }
@@ -101,6 +99,7 @@ func (n *QTree) Generation() uint64 {
 func (tr *QTree) LoadNode(addr uint64, impl_Generation uint64, impl_Pointwidth uint8, impl_StartTime int64) (*QTreeNode, error) {
 	db := tr.bs.ReadDatablock(tr.sb.Uuid(), addr, impl_Generation, impl_Pointwidth, impl_StartTime)
 	n := &QTreeNode{tr: tr}
+	n.child_cache = make([]*QTreeNode, bstore.GetKFactor())
 	switch db.GetDatablockType() {
 	case bstore.Vector:
 		n.vector_block = db.(*bstore.Vectorblock)
@@ -133,6 +132,7 @@ func (tr *QTree) NewCoreNode(startTime int64, pointWidth uint8) (*QTreeNode, err
 		tr:         tr,
 		isNew:      true,
 	}
+	rv.child_cache = make([]*QTreeNode, bstore.GetKFactor())
 	return rv, nil
 }
 
@@ -153,6 +153,7 @@ func (tr *QTree) NewVectorNode(startTime int64, pointWidth uint8) (*QTreeNode, e
 		isLeaf:       true,
 		isNew:        true,
 	}
+	rv.child_cache = make([]*QTreeNode, bstore.GetKFactor())
 	return rv, nil
 }
 
@@ -230,7 +231,7 @@ func (n *QTreeNode) TreePath() string {
 		//Try locate the index of this node in the parent
 		addr := dn.ThisAddr()
 		found := false
-		for i := 0; i < bstore.KFACTOR; i++ {
+		for i := 0; i < bstore.GetKFactor(); i++ {
 			if par.core_block.Addr[i] == addr {
 				rv = fmt.Sprintf("(%v)[%v].", par.PointWidth(), i) + rv
 				found = true
@@ -249,10 +250,10 @@ func (n *QTreeNode) ArbitraryStartTime(idx uint64, pw uint8) int64 {
 }
 
 func (n *QTreeNode) ChildPW() uint8 {
-	if n.PointWidth() <= PWFACTOR {
+	if n.PointWidth() <= bstore.GetPWFactor() {
 		return 0
 	} else {
-		return n.PointWidth() - PWFACTOR
+		return n.PointWidth() - bstore.GetPWFactor()
 	}
 }
 
@@ -274,8 +275,8 @@ func (n *QTreeNode) ClampBucket(t int64) uint16 {
 	t -= n.StartTime()
 
 	rv := (t >> n.PointWidth())
-	if rv >= bstore.KFACTOR {
-		rv = bstore.KFACTOR - 1
+	if rv >= int64(bstore.GetKFactor()) {
+		rv = int64(bstore.GetKFactor()) - 1
 	}
 	return uint16(rv)
 }
@@ -328,19 +329,19 @@ func (n *QTreeNode) EndTime() int64 {
 		return n.StartTime() + (1 << n.Parent().PointWidth())
 	} else {
 		//A core node has multiple buckets
-		return n.StartTime() + (1<<n.PointWidth())*bstore.KFACTOR
+		return n.StartTime() + (1<<n.PointWidth())*int64(bstore.GetKFactor())
 	}
 }
 
 func (n *QTreeNode) FindParentIndex() (uint16, error) {
 	//Try locate the index of this node in the parent
 	addr := n.ThisAddr()
-	for i := uint16(0); i < bstore.KFACTOR; i++ {
+	for i := uint16(0); i < uint16(bstore.GetKFactor()); i++ {
 		if n.Parent().core_block.Addr[i] == addr {
 			return i, nil
 		}
 	}
-	return bstore.KFACTOR, ErrIdxNotFound
+	return uint16(bstore.GetKFactor()), ErrIdxNotFound
 }
 
 func (n *QTreeNode) Parent() *QTreeNode {

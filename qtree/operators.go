@@ -17,7 +17,7 @@ func (n *QTreeNode) OpCountMean() (uint64, float64) {
 		}
 		return uint64(n.vector_block.Len), total / float64(n.vector_block.Len)
 	} else {
-		for i := 0; i < bstore.KFACTOR; i++ {
+		for i := 0; i < bstore.GetKFactor(); i++ {
 			if n.core_block.Count[i] == 0 {
 				continue
 			}
@@ -88,10 +88,10 @@ func (n *QTreeNode) OpReduce(pointwidth uint8, index uint64) (uint64, float64, f
 	if !n.isLeaf && pointwidth < n.PointWidth() {
 		log.Panic("Bad pointwidth for core. See code comment")
 	}
-	if pointwidth > n.PointWidth()+PWFACTOR {
+	if pointwidth > n.PointWidth()+bstore.GetPWFactor() {
 		log.Panic("Can't guarantee this PW")
 	}
-	maxpw := n.PointWidth() + PWFACTOR
+	maxpw := n.PointWidth() + bstore.GetPWFactor()
 	pwdelta := pointwidth - n.PointWidth()
 	width := int64(1) << pointwidth
 	maxidx := 1 << (maxpw - pointwidth)

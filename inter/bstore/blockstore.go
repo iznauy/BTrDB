@@ -53,7 +53,7 @@ type BlockStore struct {
 
 var block_buf_pool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, DBSIZE+5)
+		return make([]byte, GetDBSize()+5)
 	},
 }
 
@@ -244,6 +244,12 @@ func (bs *BlockStore) allocateBlock() uint64 {
  */
 func (gen *Generation) AllocateCoreblock() (*Coreblock, error) {
 	cblock := &Coreblock{}
+	cblock.Addr = make([]uint64, GetKFactor())
+	cblock.Count = make([]uint64, GetKFactor())
+	cblock.Min = make([]float64, GetKFactor())
+	cblock.Mean = make([]float64, GetKFactor())
+	cblock.Max = make([]float64, GetKFactor())
+	cblock.CGeneration = make([]uint64, GetKFactor())
 	cblock.Identifier = gen.blockstore.allocateBlock()
 	cblock.Generation = gen.Number()
 	gen.cblocks = append(gen.cblocks, cblock)
@@ -252,6 +258,8 @@ func (gen *Generation) AllocateCoreblock() (*Coreblock, error) {
 
 func (gen *Generation) AllocateVectorblock() (*Vectorblock, error) {
 	vblock := &Vectorblock{}
+	vblock.Time = make([]int64, GetVSize())
+	vblock.Value = make([]float64, GetVSize())
 	vblock.Identifier = gen.blockstore.allocateBlock()
 	vblock.Generation = gen.Number()
 	gen.vblocks = append(gen.vblocks, vblock)
@@ -277,6 +285,12 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 	switch DatablockGetBufferType(trimbuf) {
 	case Core:
 		rv := &Coreblock{}
+		rv.Addr = make([]uint64, GetKFactor())
+		rv.Count = make([]uint64, GetKFactor())
+		rv.Min = make([]float64, GetKFactor())
+		rv.Mean = make([]float64, GetKFactor())
+		rv.Max = make([]float64, GetKFactor())
+		rv.CGeneration = make([]uint64, GetKFactor())
 		rv.Deserialize(trimbuf)
 		block_buf_pool.Put(syncbuf)
 		rv.Identifier = addr
@@ -287,6 +301,8 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 		return rv
 	case Vector:
 		rv := &Vectorblock{}
+		rv.Time = make([]int64, GetVSize())
+		rv.Value = make([]float64, GetVSize())
 		rv.Deserialize(trimbuf)
 		block_buf_pool.Put(syncbuf)
 		rv.Identifier = addr

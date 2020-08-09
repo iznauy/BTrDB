@@ -70,8 +70,8 @@ type Vectorblock struct {
 	Len        uint16
 	PointWidth uint8 "implicit"
 	StartTime  int64 "implicit"
-	Time       [VSIZE]int64
-	Value      [VSIZE]float64
+	Time       []int64
+	Value      []float64
 }
 
 type Coreblock struct {
@@ -82,12 +82,12 @@ type Coreblock struct {
 	//Payload, copied
 	PointWidth  uint8 "implicit"
 	StartTime   int64 "implicit"
-	Addr        [KFACTOR]uint64
-	Count       [KFACTOR]uint64
-	Min         [KFACTOR]float64
-	Mean        [KFACTOR]float64
-	Max         [KFACTOR]float64
-	CGeneration [KFACTOR]uint64
+	Addr        []uint64
+	Count       []uint64
+	Min         []float64
+	Mean        []float64
+	Max         []float64
+	CGeneration []uint64
 }
 
 func (*Vectorblock) GetDatablockType() BlockType {
@@ -396,14 +396,14 @@ func (c *Coreblock) Serialize(dst []byte) []byte {
 
 	//Look for bottomable idx
 	bottomidx := -1
-	for i := KFACTOR - 1; i >= 0; i-- {
+	for i := GetKFactor() - 1; i >= 0; i-- {
 		if c.Addr[i] == 0 && c.CGeneration[i] == 0 {
 			bottomidx = i
 		} else {
 			break
 		}
 	}
-	for i := 0; i < KFACTOR; i++ {
+	for i := 0; i < GetKFactor(); i++ {
 		if i == bottomidx {
 			idx += writeFullZero(dst[idx:])
 			break
@@ -513,7 +513,7 @@ func (c *Coreblock) Deserialize(src []byte) {
 	dd_max_e := dedeltadeltarizer(delta_depth)
 
 	i := 0
-	for ; i < KFACTOR; i++ {
+	for ; i < GetKFactor(); i++ {
 
 		//Get addr
 		addr_dd, used, bottom := readSignedHuff(src[idx:])
@@ -585,7 +585,7 @@ func (c *Coreblock) Deserialize(src []byte) {
 	}
 
 	//Clear out from a FULLZERO
-	for ; i < KFACTOR; i++ {
+	for ; i < GetKFactor(); i++ {
 		c.Addr[i] = 0
 		c.Count[i] = 0
 		c.CGeneration[i] = 0

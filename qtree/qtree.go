@@ -58,7 +58,7 @@ func (n *QTreeNode) FindNearestValue(time int64, backwards bool) (Record, error)
 	} else {
 		//We need to find which child with nonzero count is the best to satisfy the claim.
 		idx := -1
-		for i := 0; i < KFACTOR; i++ {
+		for i := 0; i < bstore.GetKFactor(); i++ {
 			if n.core_block.Count[i] == 0 {
 				continue
 			}
@@ -213,7 +213,7 @@ func (n *QTreeNode) DeleteRange(start int64, end int64) *QTreeNode {
 				break
 			}
 		}
-		for i := eb + 1; i < KFACTOR; i++ {
+		for i := eb + 1; i < uint16(bstore.GetKFactor()); i++ {
 			if n.core_block.Addr[i] != 0 {
 				othernodes = true
 				break
@@ -283,7 +283,7 @@ func (n *QTreeNode) FindChangedSince(gen uint64, rchan chan ChangedRange, resolu
 		}*/
 		cr := ChangedRange{}
 		maxchild := uint64(0)
-		for k := 0; k < KFACTOR; k++ {
+		for k := 0; k < bstore.GetKFactor(); k++ {
 			if n.core_block.CGeneration[k] > maxchild {
 				maxchild = n.core_block.CGeneration[k]
 			}
@@ -293,7 +293,7 @@ func (n *QTreeNode) FindChangedSince(gen uint64, rchan chan ChangedRange, resolu
 		}
 
 		norecurse := n.PointWidth() <= resolution
-		for k := 0; k < KFACTOR; k++ {
+		for k := 0; k < bstore.GetKFactor(); k++ {
 			if n.core_block.CGeneration[k] > gen {
 				if n.core_block.Addr[k] == 0 || norecurse {
 					//A whole child was deleted here or we don't want to recurse further
@@ -660,10 +660,10 @@ func (n *QTreeNode) InsertValues(records []Record) (*QTreeNode, error) {
 			//Actually I don't think we can be less than the start.
 			log.Panicf("Bad window <")
 		}
-		if records[len(records)-1].Time >= n.StartTime()+((1<<n.PointWidth())*bstore.KFACTOR) {
+		if records[len(records)-1].Time >= n.StartTime()+((1<<n.PointWidth())*int64(bstore.GetKFactor())) {
 			log.Debug("FE.")
 			log.Debug("Node window s=%v e=%v", n.StartTime(),
-				n.StartTime()+((1<<n.PointWidth())*bstore.KFACTOR))
+				n.StartTime()+((1<<n.PointWidth())*int64(bstore.GetKFactor())))
 			log.Debug("record time: %v", records[len(records)-1].Time)
 			log.Panicf("Bad window >=")
 		}
@@ -671,15 +671,15 @@ func (n *QTreeNode) InsertValues(records []Record) (*QTreeNode, error) {
 	// 核心插入逻辑
 	if n.isLeaf {
 		//log.Debug("insertin values in leaf")
-		if int(n.vector_block.Len)+len(records) > bstore.VSIZE && n.PointWidth() != 0 {
+		if int(n.vector_block.Len)+len(records) > bstore.GetVSize() && n.PointWidth() != 0 {
 			//log.Debug("need to convert leaf to a core");
 			//log.Debug("because %v + %v",n.vector_block.Len, len(records))
 			//log.Debug("Converting pw %v to core", n.PointWidth())
 			n = n.ConvertToCore(records) // 假如点太多那么引入额外的中间节点，再将数据插入到中间节点下属的叶节点中
 			return n, nil
 		} else {
-			if n.PointWidth() == 0 && int(n.vector_block.Len)+len(records) > bstore.VSIZE {
-				truncidx := bstore.VSIZE - int(n.vector_block.Len)
+			if n.PointWidth() == 0 && int(n.vector_block.Len)+len(records) > bstore.GetVSize() {
+				truncidx := bstore.GetVSize() - int(n.vector_block.Len)
 				if truncidx == 0 {
 					log.Critical("Truncating - full!!")
 					return n, nil
@@ -713,7 +713,7 @@ func (n *QTreeNode) InsertValues(records []Record) (*QTreeNode, error) {
 			if buckt != lbuckt {
 				//log.Debug("records spanning bucket. flushing to child %v", lbuckt)
 				//Next bucket has started
-				childisleaf := idx-lidx < bstore.VSIZE
+				childisleaf := idx-lidx < bstore.GetVSize()
 				if n.ChildPW() == 0 {
 					childisleaf = true
 				}
@@ -727,7 +727,7 @@ func (n *QTreeNode) InsertValues(records []Record) (*QTreeNode, error) {
 			}
 		}
 		//log.Debug("reched end of records. flushing to child %v", buckt)
-		newchild, err := n.wchild(lbuckt, (len(records) - lidx) < bstore.VSIZE).InsertValues(records[lidx:])
+		newchild, err := n.wchild(lbuckt, (len(records) - lidx) < bstore.GetVSize()).InsertValues(records[lidx:])
 		//log.Debug("Address of new child was %08x", newchild.ThisAddr())
 		if err != nil {
 			log.Panicf("%v", err)
@@ -972,7 +972,7 @@ func (n *QTreeNode) ReadStandardValuesCI(rv chan Record, err chan error,
 			}
 			sbuck = n.ClampBucket(start)
 		}
-		ebuck := uint16(bstore.KFACTOR)
+		ebuck := uint16(bstore.GetKFactor())
 		if end < n.EndTime() {
 			if end < n.StartTime() {
 				log.Panicf("hmm")
@@ -1034,7 +1034,7 @@ func (n *QTreeNode) QueryWindow(end int64, nxtstart *int64, width uint64, depth 
 	if !n.isLeaf {
 		//We are core
 		var buckid uint16
-		for buckid = 0; buckid < KFACTOR; buckid++ {
+		for buckid = 0; buckid < uint16(bstore.GetKFactor()); buckid++ {
 			//EndTime is actually start of next
 			if n.ChildEndTime(buckid) <= *nxtstart {
 				//This bucket is wholly contained in the 'current' window.
@@ -1176,7 +1176,7 @@ func (n *QTreeNode) PrintCounts(indent int) {
 	_ = n.Parent()
 	pw := n.PointWidth()
 	log.Debug("%sCORE(pw=%v)", spacer, pw)
-	for i := 0; i < bstore.KFACTOR; i++ {
+	for i := 0; i < bstore.GetKFactor(); i++ {
 		if n.core_block.Addr[i] != 0 {
 			c := n.Child(uint16(i))
 			if c == nil {
