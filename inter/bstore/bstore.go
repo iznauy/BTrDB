@@ -1,6 +1,7 @@
 package bstore
 
 import (
+	"fmt"
 	"github.com/op/go-logging"
 	"os"
 	"strconv"
@@ -23,6 +24,7 @@ func init() {
 		lg.Fatal("无法从环境变量中读取 K")
 		return
 	}
+	fmt.Printf("从环境变量中读取了 K 的值，K = %d\n", k)
 	kfactor = k
 	pw := 0
 	for k > 1 {
