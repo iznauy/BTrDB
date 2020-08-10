@@ -55,6 +55,11 @@ func loadConfig() {
 		found = true
 	}
 
+	if cacheSize, err := strconv.Atoi(os.Getenv("CacheSize")); err == nil {
+		fmt.Println("从环境变量中读取了 cache 的值，cache 的大小为", cacheSize)
+		Configuration.Cache.BlockCache = cacheSize
+	}
+
 	if !found {
 		err := gcfg.ReadFileInto(&Configuration, "/etc/btrdbd/btrdbd.conf")
 		if err != nil {
