@@ -15,6 +15,7 @@ var (
 	vbsize   = 2 + 9*vsize + 9*vsize + 2*vsize
 	dbsize   = vbsize
 	pwfactor = uint8(6)
+	rootpw   = 62 - pwfactor
 )
 
 func init() {
@@ -32,6 +33,7 @@ func init() {
 		pw += 1
 	}
 	pwfactor = uint8(pw)
+	rootpw = 62 - pwfactor
 }
 
 //Note to self, if you bump VSIZE such that the max blob goes past 2^16, make sure to adapt
@@ -54,4 +56,8 @@ func GetDBSize() int {
 
 func GetPWFactor() uint8 {
 	return pwfactor
+}
+
+func GetRootPW() uint8 {
+	return rootpw
 }

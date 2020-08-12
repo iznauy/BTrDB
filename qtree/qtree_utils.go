@@ -13,7 +13,6 @@ const SECOND = 1000 * MILLISECOND
 const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
-const ROOTPW = 56 //This makes each bucket at the root ~= 2.2 years
 //so the root spans 146.23 years
 const ROOTSTART = 0 //This makes the 16th bucket start at 1970 (0)
 const MinimumTime = 0
@@ -167,7 +166,7 @@ func NewReadQTree(bs *bstore.BlockStore, id uuid.UUID, generation uint64) (*QTre
 	}
 	rv := &QTree{sb: sb, bs: bs}
 	if sb.Root() != 0 {
-		rt, err := rv.LoadNode(sb.Root(), sb.Gen(), ROOTPW, ROOTSTART) // 加载根节点信息
+		rt, err := rv.LoadNode(sb.Root(), sb.Gen(), bstore.GetRootPW(), ROOTSTART) // 加载根节点信息
 		if err != nil {
 			log.Panicf("%v", err)
 			return nil, err
@@ -189,14 +188,14 @@ func NewWriteQTree(bs *bstore.BlockStore, id uuid.UUID) (*QTree, error) {
 	//If there is an existing root node, we need to load it so that it
 	//has the correct values
 	if rv.sb.Root() != 0 {
-		rt, err := rv.LoadNode(rv.sb.Root(), rv.sb.Gen(), ROOTPW, ROOTSTART)
+		rt, err := rv.LoadNode(rv.sb.Root(), rv.sb.Gen(), bstore.GetRootPW(), ROOTSTART)
 		if err != nil {
 			log.Panicf("%v", err)
 			return nil, err
 		}
 		rv.root = rt
 	} else {
-		rt, err := rv.NewCoreNode(ROOTSTART, ROOTPW)
+		rt, err := rv.NewCoreNode(ROOTSTART, bstore.GetRootPW())
 		if err != nil {
 			log.Panicf("%v", err)
 			return nil, err

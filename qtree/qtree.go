@@ -532,7 +532,7 @@ func (n *QTreeNode) AssertNewUpPatch() (*QTreeNode, error) {
 	//Does our parent need to also uppatch?
 	if n.Parent() == nil {
 		//We don't have a parent. We better be root
-		if n.PointWidth() != ROOTPW {
+		if n.PointWidth() != bstore.GetRootPW() {
 			log.Panicf("WTF")
 		}
 	} else {
