@@ -9,7 +9,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
 	"google.golang.org/grpc"
-	"math"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -161,12 +160,12 @@ func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRe
 		}
 	}
 
-	batchCount := int(math.Ceil(float64(len(batchReq.Inserts)) / 100.0))
+	batchCount := len(batchReq.Inserts)
 	batches := make([][]*InsertRequest, batchCount)
 
 	for i := 0; i < batchCount; i++ {
-		from := i * 100
-		to := from + 100
+		from := i
+		to := from + 1
 		if to > len(batchReq.Inserts) {
 			to = len(batchReq.Inserts)
 		}
