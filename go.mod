@@ -7,8 +7,10 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/jinzhu/gorm v1.9.14
+	github.com/juju/ratelimit v1.0.1
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/pborman/uuid v1.2.0
+	github.com/yangwenmai/ratelimit v0.0.0-20180104140304-44221c2292e1
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/text v0.3.3 // indirect

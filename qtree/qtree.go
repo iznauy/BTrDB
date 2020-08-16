@@ -587,13 +587,13 @@ func (n *QTreeNode) ConvertToCore(newvals []Record) *QTreeNode {
  * This function is for inserting a large chunk of data. It is required
  * that the data is sorted, so we do that here
  */
-func (tr *QTree) InsertValues(records []Record) (e error) {
+func (tr *QTree) InsertValues(buffer Buffer) (e error) {
 	if tr.gen == nil {
 		return ErrBadInsert
 	}
-	proc_records := make([]Record, len(records))
+	proc_records := buffer.ToSlice()
 	idx := 0
-	for _, v := range records { // 把一些数据不正确、时间超出范围的数据点筛选出去
+	for _, v := range proc_records { // 把一些数据不正确、时间超出范围的数据点筛选出去
 		if math.IsInf(v.Val, 0) || math.IsNaN(v.Val) {
 			log.Debug("WARNING Got Inf/NaN insert value, dropping")
 		} else if v.Time <= MinimumTime || v.Time >= MaximumTime {

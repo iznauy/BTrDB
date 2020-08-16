@@ -3,7 +3,6 @@ package btrdbd
 import (
 	"fmt"
 	"github.com/cespare/xxhash"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -19,25 +18,19 @@ func init() {
 	log = logging.MustGetLogger("log")
 }
 
-
-var (
-	span time.Duration
-	times int64
-	mu sync.Mutex
-)
-
-
 type openTree struct {
 	// 缓冲区
-	store []qtree.Record
-	id    uuid.UUID
-	sigEC chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
+	store  qtree.Buffer
+	id     uuid.UUID
+	sigEC  chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
+	policy BufferPolicy
 }
 
 type forest struct {
 	mu        sync.RWMutex             // 全局锁
 	treeLocks map[[16]byte]*sync.Mutex // 🌲锁
 	openTrees map[[16]byte]*openTree   // 每个时间序列对应自己的缓冲区
+	q         *Quasar
 }
 
 func (f *forest) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
@@ -57,6 +50,10 @@ func (f *forest) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
 		f.openTrees[mk] = ot
 		f.treeLocks[mk] = mtx
 		f.mu.Unlock()
+		mtx.Lock()
+		ot.policy = &NaiveBufferPolicy{}
+		ot.policy.InitPolicy(f.q, ot)
+		mtx.Unlock()
 		return ot, mtx
 	}
 	mtx, _ := f.treeLocks[mk]
@@ -69,7 +66,7 @@ func (f *forest) isPending() bool {
 	f.mu.Lock()
 	for uuid, ot := range f.openTrees {
 		f.treeLocks[uuid].Lock()
-		if len(ot.store) != 0 {
+		if ot.store != nil && ot.store.Len() > 0 {
 			isPend = true
 			f.treeLocks[uuid].Unlock()
 			break
@@ -85,8 +82,8 @@ const MaximumTime = 64 << 56
 const LatestGeneration = bstore.LatestGeneration
 
 type Quasar struct {
-	cfg QuasarConfig
-	bs  *bstore.BlockStore
+	cfg     QuasarConfig
+	bs      *bstore.BlockStore
 	forests []*forest
 }
 
@@ -134,32 +131,34 @@ func NewQuasar(cfg *QuasarConfig) (*Quasar, error) {
 		return nil, err
 	}
 	forests := make([]*forest, cfg.ForestCount)
-	for i := 0; i < len(forests); i++ {
-		forests[i] = &forest{
-			openTrees: make(map[[16]byte]*openTree, 128),
-			treeLocks: make(map[[16]byte]*sync.Mutex, 128),
-		}
-	}
 	rv := &Quasar{
 		cfg:     *cfg,
 		bs:      bs,
 		forests: forests,
+	}
+	for i := 0; i < len(forests); i++ {
+		forests[i] = &forest{
+			openTrees: make(map[[16]byte]*openTree, 128),
+			treeLocks: make(map[[16]byte]*sync.Mutex, 128),
+			q:         rv,
+		}
 	}
 	return rv, nil
 }
 
 // 获取某个树的缓冲区及其对应的锁
 func (q *Quasar) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
-	return q.forests[xxhash.Sum64String(id.String()) % q.cfg.ForestCount].getTree(id)
+	return q.forests[xxhash.Sum64String(id.String())%q.cfg.ForestCount].getTree(id)
 }
 
 // 提交缓冲区中的数据
 func (t *openTree) commit(q *Quasar) {
-	if len(t.store) == 0 {
+	if t.store != nil && t.store.Len() == 0 {
 		//This might happen with a race in the timeout commit
 		fmt.Println("no store in commit")
 		return
 	}
+	t.policy.CommitNotice()
 	tr, err := qtree.NewWriteQTree(q.bs, t.id)
 	if err != nil {
 		log.Panic(err)
@@ -178,35 +177,35 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 			log.Error("BAD INSERT: ", r)
 		}
 	}()
-	start := time.Now()
 	tr, mtx := q.getTree(id)
-	localSpan := time.Now().Sub(start)
-	mu.Lock()
-	span += localSpan
-	times++
-	if times % 1000 == 0 {
-		fmt.Println("最近1000次加载 write tree，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
-		times = 0
-		span = 0
-	}
-	mu.Unlock()
 	mtx.Lock()
 	if tr == nil {
 		log.Panicf("This should not happen")
+		return
 	}
-	if !q.cfg.TransactionCoalesceEnable {
-		tr.store = r
+	if !q.cfg.TransactionCoalesceEnable && !tr.policy.IsNewTree() { // 新树强制聚合 transactions
+		tr.store = qtree.SliceBuffer(r)
 		tr.commit(q)
 		mtx.Unlock()
 		return
 	}
 	if tr.store == nil {
 		//Empty store
-		tr.store = make([]qtree.Record, 0, len(r)*2)
+		bufferType := tr.policy.GetBufferType()
+		switch bufferType {
+		case Slice:
+			tr.store = qtree.NewSliceBuffer()
+		case PreAllocatedSlice:
+			tr.store = qtree.NewPreAllocatedSliceBuffer(tr.policy.GetBufferMaxSize())
+		case LinkedList:
+			tr.store = qtree.NewLinkedListBuffer()
+		default:
+			log.Fatalf("unknown buffer type: %d", bufferType)
+		}
 		tr.sigEC = make(chan bool, 1)
 		//Also spawn the coalesce timeout goroutine
 		go func(abrt chan bool) {
-			tmt := time.After(time.Duration((q.cfg.TransactionCoalesceInterval>>1)+rand.Uint64()%q.cfg.TransactionCoalesceInterval) * time.Millisecond)
+			tmt := time.After(time.Duration(tr.policy.GetEarlyTripTime()) * time.Millisecond)
 			select {
 			case <-tmt:
 				//do coalesce
@@ -220,28 +219,13 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 			}
 		}(tr.sigEC)
 	}
-	tr.store = append(tr.store, r...)
-	if uint64(len(tr.store)) >= q.cfg.TransactionCoalesceEarlyTrip {
+	tr.store.Write(r)
+	if uint64(tr.store.Len()) >= tr.policy.GetBufferMaxSize() {
 		tr.sigEC <- true
 		log.Debug("Coalesce early trip %v", id.String())
 		tr.commit(q)
 	}
 	mtx.Unlock()
-}
-
-// 强行刷新数据
-func (q *Quasar) Flush(id uuid.UUID) error {
-	tr, mtx := q.getTree(id)
-	mtx.Lock()
-	if len(tr.store) != 0 {
-		tr.sigEC <- true
-		tr.commit(q)
-		fmt.Printf("Commit done %+v\n", id)
-	} else {
-		fmt.Printf("no store\n")
-	}
-	mtx.Unlock()
-	return nil
 }
 
 // 读取某个版本下某个时间区间的所有数据
@@ -352,7 +336,6 @@ func (q *Quasar) QueryChangedRanges(id uuid.UUID, startgen uint64, endgen uint64
 	rch := tr.FindChangedSince(startgen, resolution)
 	var lr *ChangedRange = nil
 	for {
-
 		select {
 		case cr, ok := <-rch:
 			if !ok {
@@ -377,14 +360,13 @@ func (q *Quasar) QueryChangedRanges(id uuid.UUID, startgen uint64, endgen uint64
 			}
 		}
 	}
-	return rv, tr.Generation(), nil
 }
 
 // 删除某个时间区间，这边涉及到写的问题
 func (q *Quasar) DeleteRange(id uuid.UUID, start int64, end int64) error {
 	tr, mtx := q.getTree(id)
 	mtx.Lock()
-	if len(tr.store) != 0 {
+	if tr.store != nil && tr.store.Len() != 0 {
 		tr.sigEC <- true
 		tr.commit(q) // 执行删除操作的时候，如果还有没刷新的数据，先刷新数据
 	}
