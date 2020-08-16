@@ -26,9 +26,9 @@ var batchInsertInProcess int32 = 0
 var limiter *rateLimiter
 
 var (
-	span time.Duration
+	span  time.Duration
 	times int64
-	mu sync.Mutex
+	mu    sync.Mutex
 )
 
 var Success = &Status{
@@ -52,16 +52,25 @@ var BadTimes = errors.New("Invalid time range")
 
 var ErrTooManyRequests = &Status{
 	Code: 504,
-	Msg: "Too many requests",
+	Msg:  "Too many requests",
 }
 
 var TooManyRequests = errors.New("Too many requests")
 
-type GRPCInterface struct {
+type GrpcInterface struct {
 	q *btrdb2.Quasar
 }
 
-func ServeGRPC(q *btrdb2.Quasar, config map[string]interface{}) {
+type GrpcConfig struct {
+	Address        string
+
+	UseRateLimiter bool
+	ReadLimit      int64
+	WriteLimit     int64
+	LimitVariable       bool
+}
+
+func ServeGRPC(q *btrdb2.Quasar, config *GrpcConfig) {
 	go func() {
 		for {
 			time.Sleep(5 * time.Second)
@@ -69,34 +78,17 @@ func ServeGRPC(q *btrdb2.Quasar, config map[string]interface{}) {
 		}
 	}()
 
-	useLimiter, ok := config["useLimiter"].(bool)
-	if ok && useLimiter {
-		readLimit, ok := config["readLimit"].(int64)
-		if !ok || readLimit == 0 {
-			readLimit = 50 * 1024
-		}
-		writeLimit, ok := config["writeLimit"].(int64)
-		if !ok || writeLimit == 0 {
-			writeLimit = 50 * 1024 * 1024
-		}
-		variable, ok := config["variable"].(bool)
-		if !ok {
-			variable = false
-		}
-		limiter = newLimiter(readLimit, writeLimit, variable)
+	if config.UseRateLimiter {
+		limiter = newLimiter(config.ReadLimit, config.WriteLimit, config.LimitVariable)
 	}
 
-	addr, ok := config["address"].(string)
-	if !ok {
-		panic("grpc address is nil")
-	}
-	l, err := net.Listen("tcp", addr)
+	l, err := net.Listen("tcp", config.Address)
 	if err != nil {
 		panic(err)
 	}
 	maxSize := 200 * 1024 * 1024 // 最大消息为 40M，这样一次可以传输上百万个数据点
 	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(maxSize), grpc.MaxSendMsgSize(maxSize))
-	RegisterBTrDBServer(grpcServer, &GRPCInterface{
+	RegisterBTrDBServer(grpcServer, &GrpcInterface{
 		q: q,
 	})
 	if err := grpcServer.Serve(l); err != nil {
@@ -104,7 +96,7 @@ func ServeGRPC(q *btrdb2.Quasar, config map[string]interface{}) {
 	}
 }
 
-func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*InsertResponse, error) {
+func (g *GrpcInterface) Insert(ctx context.Context, req *InsertRequest) (*InsertResponse, error) {
 	if err := checkWorkLoad(req); err != nil {
 		log.Warningf("[Insert] checkWorkLoad error: err=%v", err)
 		return &InsertResponse{
@@ -140,7 +132,7 @@ func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*Insert
 	}, nil
 }
 
-func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGroup) { // 同步方法
+func (g *GrpcInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGroup) { // 同步方法
 	recordsMap := make(map[string][]qtree.Record, len(insertReqs))
 	for _, req := range insertReqs {
 		records := make([]qtree.Record, 0, len(req.Values))
@@ -164,8 +156,8 @@ func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 		mu.Lock()
 		span += localSpan
 		times += 1
-		if times % 1000 == 0 {
-			fmt.Println("最近1000次数据点插入，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+		if times%1000 == 0 {
+			fmt.Println("最近1000次数据点插入，平均每次耗时：", float64(span.Milliseconds())/1000.0, "ms")
 			times = 0
 			span = 0
 		}
@@ -174,7 +166,7 @@ func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 	w.Done()
 }
 
-func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRequest) (*BatchInsertResponse, error) {
+func (g *GrpcInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRequest) (*BatchInsertResponse, error) {
 	if err := checkWorkLoad(batchReq); err != nil {
 		log.Warningf("[BatchInsert] checkWorkLoad error: err=%v", err)
 		return &BatchInsertResponse{
@@ -229,7 +221,7 @@ func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRe
 	}, nil
 }
 
-func (g *GRPCInterface) Delete(ctx context.Context, req *DeleteRequest) (*DeleteResponse, error) {
+func (g *GrpcInterface) Delete(ctx context.Context, req *DeleteRequest) (*DeleteResponse, error) {
 	if err := checkWorkLoad(req); err != nil {
 		log.Warningf("[Delete] checkWorkLoad error: err=%v", err)
 		return &DeleteResponse{
@@ -257,7 +249,7 @@ func (g *GRPCInterface) Delete(ctx context.Context, req *DeleteRequest) (*Delete
 	}, nil
 }
 
-func (g *GRPCInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) (*QueryRangeResponse, error) {
+func (g *GrpcInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) (*QueryRangeResponse, error) {
 	if err := checkWorkLoad(req); err != nil {
 		log.Warningf("[QueryRange] checkWorkLoad error: err=%v", err)
 		return &QueryRangeResponse{
@@ -298,7 +290,7 @@ func (g *GRPCInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) 
 	}, nil
 }
 
-func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearestValueRequest) (*QueryNearestValueResponse, error) {
+func (g *GrpcInterface) QueryNearestValue(ctx context.Context, req *QueryNearestValueRequest) (*QueryNearestValueResponse, error) {
 	if err := checkWorkLoad(req); err != nil {
 		log.Warningf("[QueryNearestValue] checkWorkLoad error: err=%v", err)
 		return &QueryNearestValueResponse{
@@ -336,7 +328,7 @@ func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearest
 	}, nil
 }
 
-func (g *GRPCInterface) QueryStatistics(ctx context.Context, req *QueryStatisticsRequest) (*QueryStatisticsResponse, error) {
+func (g *GrpcInterface) QueryStatistics(ctx context.Context, req *QueryStatisticsRequest) (*QueryStatisticsResponse, error) {
 	if err := checkWorkLoad(req); err != nil {
 		log.Warningf("[QueryStatistics] checkWorkLoad error: err=%v", err)
 		return &QueryStatisticsResponse{

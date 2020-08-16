@@ -10,9 +10,13 @@ import (
 
 type Config struct {
 	GRPC struct {
-		Port    *int
-		Address *string
-		Enabled bool
+		Port           *int
+		Address        *string
+		Enabled        bool
+		UseRateLimiter bool
+		ReadLimit      *int
+		WriteLimit     *int
+		LimitVariable  *bool
 	}
 	Meta struct {
 		Provider          string
@@ -110,6 +114,21 @@ func loadConfig() {
 
 	if Configuration.GRPC.Enabled && Configuration.GRPC.Address == nil {
 		fmt.Printf("Aborting: grpc server enabled, but no address specified\n")
+		os.Exit(1)
+	}
+
+	if Configuration.GRPC.UseRateLimiter && Configuration.GRPC.ReadLimit == nil {
+		fmt.Printf("Aborting: grpc server use rate limiter, but no read limiter specified\n")
+		os.Exit(1)
+	}
+
+	if Configuration.GRPC.UseRateLimiter && Configuration.GRPC.WriteLimit == nil {
+		fmt.Printf("Aborting: grpc server use rate limiter, but no write limiter specified\n")
+		os.Exit(1)
+	}
+
+	if Configuration.GRPC.UseRateLimiter && Configuration.GRPC.LimitVariable == nil {
+		fmt.Printf("Aborting: grpc server use rate limiter, but limiter variable not set\n")
 		os.Exit(1)
 	}
 

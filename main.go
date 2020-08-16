@@ -61,10 +61,10 @@ func main() {
 	nCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nCPU)
 	cfg := btrdbd.QuasarConfig{
-		DatablockCacheSize:           uint64(Configuration.Cache.BlockCache),
-		TransactionCoalesceEnable:    Configuration.Coalescence.Enable,
-		ForestCount:                  uint64(*Configuration.Forest.Count),
-		Params:                       Params,
+		DatablockCacheSize:        uint64(Configuration.Cache.BlockCache),
+		TransactionCoalesceEnable: Configuration.Coalescence.Enable,
+		ForestCount:               uint64(*Configuration.Forest.Count),
+		Params:                    Params,
 	}
 	if Configuration.Coalescence.Enable {
 		cfg.TransactionCoalesceInterval = uint64(*Configuration.Coalescence.Interval)
@@ -76,9 +76,16 @@ func main() {
 	}
 
 	if Configuration.GRPC.Enabled {
-		grpcConfig := make(map[string]interface{})
-		grpcConfig["address"] = *Configuration.GRPC.Address+":"+strconv.FormatInt(int64(*Configuration.GRPC.Port), 10)
-		go grpcinterface.ServeGRPC(q, grpcConfig)
+		grpcConfig := grpcinterface.GrpcConfig{
+			Address:        *Configuration.GRPC.Address + ":" + strconv.FormatInt(int64(*Configuration.GRPC.Port), 10),
+			UseRateLimiter: Configuration.GRPC.UseRateLimiter,
+		}
+		if grpcConfig.UseRateLimiter {
+			grpcConfig.LimitVariable = *Configuration.GRPC.LimitVariable
+			grpcConfig.ReadLimit = int64(*Configuration.GRPC.ReadLimit)
+			grpcConfig.WriteLimit = int64(*Configuration.GRPC.WriteLimit)
+		}
+		go grpcinterface.ServeGRPC(q, &grpcConfig)
 	}
 
 	if Configuration.Debug.Heapprofile {
