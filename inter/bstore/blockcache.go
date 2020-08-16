@@ -56,7 +56,7 @@ func (bs *BlockStore) cachePromote(i *CacheItem) {
 }
 
 func (bs *BlockStore) cachePut(vaddr uint64, item Datablock) {
-	if bs.cachemax == 0 {
+	if bs.GetCacheMaxSize() == 0 {
 		return
 	}
 	bs.cachemtx.Lock()
@@ -77,7 +77,7 @@ func (bs *BlockStore) cachePut(vaddr uint64, item Datablock) {
 }
 
 func (bs *BlockStore) cacheGet(vaddr uint64) Datablock {
-	if bs.cachemax == 0 {
+	if bs.GetCacheMaxSize() == 0 {
 		bs.cachemiss++
 		return nil
 	}
@@ -129,7 +129,9 @@ func (bs *BlockStore) walkCache() {
 //This must be called with the mutex held
 // cache 块数量超过上限，则依据 LRU 原则淘汰最近不使用的 cache
 func (bs *BlockStore) cacheCheckCap() {
-	for bs.cachelen > bs.cachemax {
+	cacheMax := bs.GetCacheMaxSize()
+	c := 0
+	for bs.cachelen > cacheMax && c < 100 { // 最多淘汰 100 个
 		i := bs.cacheold
 		delete(bs.cachemap, i.vaddr)
 		if i.newer != nil {
@@ -137,5 +139,6 @@ func (bs *BlockStore) cacheCheckCap() {
 		}
 		bs.cacheold = i.newer
 		bs.cachelen--
+		c++
 	}
 }

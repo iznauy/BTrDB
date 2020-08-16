@@ -76,7 +76,9 @@ func main() {
 	}
 
 	if Configuration.GRPC.Enabled {
-		go grpcinterface.ServeGRPC(q, *Configuration.GRPC.Address+":"+strconv.FormatInt(int64(*Configuration.GRPC.Port), 10))
+		grpcConfig := make(map[string]interface{})
+		grpcConfig["address"] = *Configuration.GRPC.Address+":"+strconv.FormatInt(int64(*Configuration.GRPC.Port), 10)
+		go grpcinterface.ServeGRPC(q, grpcConfig)
 	}
 
 	if Configuration.Debug.Heapprofile {

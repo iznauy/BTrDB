@@ -23,6 +23,8 @@ func init() {
 
 var batchInsertInProcess int32 = 0
 
+var limiter *rateLimiter
+
 var (
 	span time.Duration
 	times int64
@@ -48,17 +50,46 @@ var ErrBadTimes = &Status{
 
 var BadTimes = errors.New("Invalid time range")
 
+var ErrTooManyRequests = &Status{
+	Code: 504,
+	Msg: "Too many requests",
+}
+
+var TooManyRequests = errors.New("Too many requests")
+
 type GRPCInterface struct {
 	q *btrdb2.Quasar
 }
 
-func ServeGRPC(q *btrdb2.Quasar, addr string) {
+func ServeGRPC(q *btrdb2.Quasar, config map[string]interface{}) {
 	go func() {
 		for {
 			time.Sleep(5 * time.Second)
 			fmt.Println("Num BatchInsert In Process: ", batchInsertInProcess)
 		}
 	}()
+
+	useLimiter, ok := config["useLimiter"].(bool)
+	if ok && useLimiter {
+		readLimit, ok := config["readLimit"].(int64)
+		if !ok || readLimit == 0 {
+			readLimit = 50 * 1024
+		}
+		writeLimit, ok := config["writeLimit"].(int64)
+		if !ok || writeLimit == 0 {
+			writeLimit = 50 * 1024 * 1024
+		}
+		variable, ok := config["variable"].(bool)
+		if !ok {
+			variable = false
+		}
+		limiter = newLimiter(readLimit, writeLimit, variable)
+	}
+
+	addr, ok := config["address"].(string)
+	if !ok {
+		panic("grpc address is nil")
+	}
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
@@ -74,6 +105,12 @@ func ServeGRPC(q *btrdb2.Quasar, addr string) {
 }
 
 func (g *GRPCInterface) Insert(ctx context.Context, req *InsertRequest) (*InsertResponse, error) {
+	if err := checkWorkLoad(req); err != nil {
+		log.Warningf("[Insert] checkWorkLoad error: err=%v", err)
+		return &InsertResponse{
+			Status: ErrTooManyRequests,
+		}, nil
+	}
 	records := make([]qtree.Record, 0, len(req.Values))
 	for _, val := range req.Values {
 		if val == nil {
@@ -138,6 +175,12 @@ func (g *GRPCInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 }
 
 func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRequest) (*BatchInsertResponse, error) {
+	if err := checkWorkLoad(batchReq); err != nil {
+		log.Warningf("[BatchInsert] checkWorkLoad error: err=%v", err)
+		return &BatchInsertResponse{
+			Status: ErrTooManyRequests,
+		}, nil
+	}
 	// 首先对数据进行一次预检，有问题及时返回
 	for _, insertReq := range batchReq.Inserts {
 		err := checkInsertReq(insertReq)
@@ -187,6 +230,12 @@ func (g *GRPCInterface) BatchInsert(ctx context.Context, batchReq *BatchInsertRe
 }
 
 func (g *GRPCInterface) Delete(ctx context.Context, req *DeleteRequest) (*DeleteResponse, error) {
+	if err := checkWorkLoad(req); err != nil {
+		log.Warningf("[Delete] checkWorkLoad error: err=%v", err)
+		return &DeleteResponse{
+			Status: ErrTooManyRequests,
+		}, nil
+	}
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
 		log.Fatal("[Delete] invalid uuid: %v", err)
@@ -209,6 +258,12 @@ func (g *GRPCInterface) Delete(ctx context.Context, req *DeleteRequest) (*Delete
 }
 
 func (g *GRPCInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) (*QueryRangeResponse, error) {
+	if err := checkWorkLoad(req); err != nil {
+		log.Warningf("[QueryRange] checkWorkLoad error: err=%v", err)
+		return &QueryRangeResponse{
+			Status: ErrTooManyRequests,
+		}, nil
+	}
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
 		log.Fatal("[QueryRange] invalid uuid: %v", err)
@@ -244,6 +299,12 @@ func (g *GRPCInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) 
 }
 
 func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearestValueRequest) (*QueryNearestValueResponse, error) {
+	if err := checkWorkLoad(req); err != nil {
+		log.Warningf("[QueryNearestValue] checkWorkLoad error: err=%v", err)
+		return &QueryNearestValueResponse{
+			Status: ErrTooManyRequests,
+		}, nil
+	}
 	log.Infof("[QueryNearestValue] req=%v", req)
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
@@ -276,6 +337,12 @@ func (g *GRPCInterface) QueryNearestValue(ctx context.Context, req *QueryNearest
 }
 
 func (g *GRPCInterface) QueryStatistics(ctx context.Context, req *QueryStatisticsRequest) (*QueryStatisticsResponse, error) {
+	if err := checkWorkLoad(req); err != nil {
+		log.Warningf("[QueryStatistics] checkWorkLoad error: err=%v", err)
+		return &QueryStatisticsResponse{
+			Status: ErrTooManyRequests,
+		}, nil
+	}
 	log.Infof("[QueryStatistics] req=%v", req)
 	id, err := uuid.ParseBytes(req.Uuid)
 	if err != nil {
@@ -329,6 +396,25 @@ func checkInsertReq(req *InsertRequest) error {
 		if !checkTime(point.Time) {
 			log.Fatal("[checkInsertReq] invalid time: %v", point)
 			return BadTimes
+		}
+	}
+	return nil
+}
+
+func checkWorkLoad(req interface{}) error {
+	if limiter == nil {
+		return nil
+	}
+	switch r := req.(type) {
+	case GrpcReadRequest:
+		ok := limiter.Read(r)
+		if !ok {
+			return TooManyRequests
+		}
+	case GrpcWriteRequest:
+		ok := limiter.Write(r)
+		if !ok {
+			return TooManyRequests
 		}
 	}
 	return nil

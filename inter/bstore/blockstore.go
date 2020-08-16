@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
+	"github.com/iznauy/BTrDB/variable"
 	"os"
 	"strconv"
 	"sync"
@@ -17,11 +18,10 @@ import (
 const LatestGeneration = uint64(^(uint64(0)))
 
 var (
-	span time.Duration
+	span  time.Duration
 	times int64
-	mu sync.Mutex
+	mu    sync.Mutex
 )
-
 
 // 将 uuid 转化成比特数组
 func UUIDToMapKey(id uuid.UUID) [16]byte {
@@ -36,12 +36,13 @@ type BlockStore struct {
 
 	params map[string]string
 
-	cachemap map[uint64]*CacheItem
-	cacheold *CacheItem
-	cachenew *CacheItem
-	cachemtx sync.Mutex
-	cachelen uint64
-	cachemax uint64
+	cachemap    map[uint64]*CacheItem
+	cacheold    *CacheItem
+	cachenew    *CacheItem
+	cachemtx    sync.Mutex
+	cachelen    uint64
+	cachemax    uint64
+	cachemaxmtx sync.RWMutex
 
 	cachemiss uint64
 	cachehit  uint64
@@ -135,7 +136,29 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	}
 	bs.initCache(uint64(cachesz))
 
+	// 动态变化 cache
+	go func(bs *BlockStore) {
+		for {
+			// 定期激活
+			time.Sleep(10 * time.Second)
+
+			// cache 计算逻辑，需要改写
+			cacheMaxSize := variable.GetMaxCacheSize(nil)
+
+			bs.cachemaxmtx.Lock()
+			bs.cachemax = cacheMaxSize
+			bs.cachemaxmtx.Unlock()
+		}
+	}(&bs)
+
 	return &bs, nil
+}
+
+func (bs *BlockStore) GetCacheMaxSize() uint64 {
+	bs.cachemaxmtx.RLock()
+	cachemax := bs.cachemax
+	bs.cachemaxmtx.RUnlock()
+	return cachemax
 }
 
 /*
@@ -198,8 +221,8 @@ func (gen *Generation) Commit() (map[uint64]uint64, error) {
 	mu.Lock()
 	span += localSpan
 	times += 1
-	if times % 1000 == 0 {
-		fmt.Println("最近1000次数据持久化，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+	if times%1000 == 0 {
+		fmt.Println("最近1000次数据持久化，平均每次耗时：", float64(span.Milliseconds())/1000.0, "ms")
 		times = 0
 		span = 0
 	}
