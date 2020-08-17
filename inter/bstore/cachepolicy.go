@@ -16,5 +16,3 @@ func (p *NaiveCachePolicy) InitPolicy(store *BlockStore) {
 func (p *NaiveCachePolicy) GetCacheSize() uint64 {
 	return p.store.cachemax
 }
-
-

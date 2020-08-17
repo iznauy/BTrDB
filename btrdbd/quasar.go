@@ -158,7 +158,6 @@ func (t *openTree) commit(q *Quasar) {
 		fmt.Println("no store in commit")
 		return
 	}
-	t.policy.CommitNotice()
 	tr, err := qtree.NewWriteQTree(q.bs, t.id)
 	if err != nil {
 		log.Panic(err)
@@ -168,6 +167,7 @@ func (t *openTree) commit(q *Quasar) {
 	}
 	tr.Commit()
 	t.store = nil
+	t.policy.CommitNotice()
 }
 
 // 插入数据点，如果没达到 buffer 限制，将数据插入到 buffer，否则将会提前刷新数据

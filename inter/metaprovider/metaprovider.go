@@ -17,6 +17,8 @@ type Meta struct {
 	Uuid     string
 	Version  uint64
 	Root     uint64
+	K        uint16
+	V        uint32
 	Unlinked bool
 }
 

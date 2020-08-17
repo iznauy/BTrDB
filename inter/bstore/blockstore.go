@@ -47,7 +47,7 @@ type BlockStore struct {
 
 var block_buf_pool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, GetDBSize()+5)
+		return make([]byte, 16384)
 	},
 }
 
@@ -65,6 +65,7 @@ type Generation struct {
 	vblocks    []*Vectorblock
 	blockstore *BlockStore
 	flushed    bool
+	newts      bool
 }
 
 func (g *Generation) UpdateRootAddr(addr uint64) {
@@ -72,11 +73,15 @@ func (g *Generation) UpdateRootAddr(addr uint64) {
 	g.New_SB.root = addr
 }
 func (g *Generation) Uuid() *uuid.UUID {
-	return &g.Cur_SB.uuid
+	return &g.New_SB.uuid
 }
 
 func (g *Generation) Number() uint64 { // 版本号信息
 	return g.New_SB.gen
+}
+
+func (g *Generation) IsNewTS() bool {
+	return g.newts
 }
 
 func NewBlockStore(params map[string]string) (*BlockStore, error) {
@@ -179,22 +184,26 @@ func (bs *BlockStore) ObtainGeneration(id uuid.UUID) *Generation {
 	}
 
 	gen := &Generation{
-		cblocks: make([]*Coreblock, 0, 8192),
-		vblocks: make([]*Vectorblock, 0, 8192),
+		cblocks: make([]*Coreblock, 0, 10),
+		vblocks: make([]*Vectorblock, 0, 10),
 	}
 
 	meta, err := bs.meta.GetLatestMeta(id.String())
 	if err == metaprovider.MetaNotFound {
 		gen.Cur_SB = NewSuperblock(id)
+		gen.newts = true
 	} else if err != nil {
 		lg.Panicf("meta provider error: %v", err)
 	} else {
 		sb := Superblock{
 			uuid: id,
 			root: meta.Root,
+			k:    meta.K,
+			v:    meta.V,
 			gen:  meta.Version,
 		}
 		gen.Cur_SB = &sb
+		gen.newts = false
 	}
 
 	gen.New_SB = gen.Cur_SB.Clone()
@@ -252,12 +261,12 @@ func (bs *BlockStore) allocateBlock() uint64 {
  */
 func (gen *Generation) AllocateCoreblock() (*Coreblock, error) {
 	cblock := &Coreblock{}
-	cblock.Addr = make([]uint64, GetKFactor())
-	cblock.Count = make([]uint64, GetKFactor())
-	cblock.Min = make([]float64, GetKFactor())
-	cblock.Mean = make([]float64, GetKFactor())
-	cblock.Max = make([]float64, GetKFactor())
-	cblock.CGeneration = make([]uint64, GetKFactor())
+	cblock.Addr = make([]uint64, gen.New_SB.k)
+	cblock.Count = make([]uint64, gen.New_SB.k)
+	cblock.Min = make([]float64, gen.New_SB.k)
+	cblock.Mean = make([]float64, gen.New_SB.k)
+	cblock.Max = make([]float64, gen.New_SB.k)
+	cblock.CGeneration = make([]uint64, gen.New_SB.k)
 	cblock.Identifier = gen.blockstore.allocateBlock()
 	cblock.Generation = gen.Number()
 	gen.cblocks = append(gen.cblocks, cblock)
@@ -266,8 +275,8 @@ func (gen *Generation) AllocateCoreblock() (*Coreblock, error) {
 
 func (gen *Generation) AllocateVectorblock() (*Vectorblock, error) {
 	vblock := &Vectorblock{}
-	vblock.Time = make([]int64, GetVSize())
-	vblock.Value = make([]float64, GetVSize())
+	vblock.Time = make([]int64, gen.New_SB.v)
+	vblock.Value = make([]float64, gen.New_SB.v)
 	vblock.Identifier = gen.blockstore.allocateBlock()
 	vblock.Generation = gen.Number()
 	gen.vblocks = append(gen.vblocks, vblock)
@@ -282,7 +291,7 @@ func (bs *BlockStore) FreeVectorblock(vb **Vectorblock) {
 	*vb = nil
 }
 
-func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation uint64, impl_Pointwidth uint8, impl_StartTime int64) Datablock {
+func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation uint64, impl_Pointwidth uint8, impl_StartTime int64, k int, v int) Datablock {
 	//Try hit the cache first
 	db := bs.cacheGet(addr)
 	if db != nil {
@@ -293,12 +302,12 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 	switch DatablockGetBufferType(trimbuf) {
 	case Core:
 		rv := &Coreblock{}
-		rv.Addr = make([]uint64, GetKFactor())
-		rv.Count = make([]uint64, GetKFactor())
-		rv.Min = make([]float64, GetKFactor())
-		rv.Mean = make([]float64, GetKFactor())
-		rv.Max = make([]float64, GetKFactor())
-		rv.CGeneration = make([]uint64, GetKFactor())
+		rv.Addr = make([]uint64, k)
+		rv.Count = make([]uint64, k)
+		rv.Min = make([]float64, k)
+		rv.Mean = make([]float64, k)
+		rv.Max = make([]float64, k)
+		rv.CGeneration = make([]uint64, k)
 		rv.Deserialize(trimbuf)
 		block_buf_pool.Put(syncbuf)
 		rv.Identifier = addr
@@ -309,8 +318,8 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 		return rv
 	case Vector:
 		rv := &Vectorblock{}
-		rv.Time = make([]int64, GetVSize())
-		rv.Value = make([]float64, GetVSize())
+		rv.Time = make([]int64, v)
+		rv.Value = make([]float64, v)
 		rv.Deserialize(trimbuf)
 		block_buf_pool.Put(syncbuf)
 		rv.Identifier = addr
@@ -352,6 +361,8 @@ func (bs *BlockStore) LoadSuperblock(id uuid.UUID, generation uint64) *Superbloc
 		uuid:     id,
 		gen:      meta.Version,
 		root:     meta.Root,
+		k:        meta.K,
+		v:        meta.V,
 		unlinked: meta.Unlinked,
 	}
 	return &rv

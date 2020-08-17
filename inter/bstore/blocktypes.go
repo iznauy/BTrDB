@@ -10,6 +10,8 @@ type Superblock struct {
 	uuid     uuid.UUID
 	gen      uint64 // 版本信息
 	root     uint64
+	k        uint16
+	v        uint32
 	unlinked bool
 }
 
@@ -29,6 +31,21 @@ func (s *Superblock) Unlinked() bool {
 	return s.unlinked
 }
 
+func (s *Superblock) K() uint16 {
+	return s.k
+}
+
+func (s *Superblock) V() uint32 {
+	return s.v
+}
+
+func (s *Superblock) InitNewTS(K uint16, V uint32) {
+	if s.k == 0 || s.v == 0 {
+		s.k = K
+		s.v = V
+	}
+}
+
 func NewSuperblock(id uuid.UUID) *Superblock {
 	return &Superblock{
 		uuid: id,
@@ -42,6 +59,8 @@ func (s *Superblock) Clone() *Superblock {
 		uuid: s.uuid,
 		gen:  s.gen,
 		root: s.root,
+		k:    s.k,
+		v:    s.v,
 	}
 }
 
@@ -396,14 +415,15 @@ func (c *Coreblock) Serialize(dst []byte) []byte {
 
 	//Look for bottomable idx
 	bottomidx := -1
-	for i := GetKFactor() - 1; i >= 0; i-- {
+	k := len(c.Count)
+	for i := k - 1; i >= 0; i-- {
 		if c.Addr[i] == 0 && c.CGeneration[i] == 0 {
 			bottomidx = i
 		} else {
 			break
 		}
 	}
-	for i := 0; i < GetKFactor(); i++ {
+	for i := 0; i < k; i++ {
 		if i == bottomidx {
 			idx += writeFullZero(dst[idx:])
 			break
@@ -513,7 +533,8 @@ func (c *Coreblock) Deserialize(src []byte) {
 	dd_max_e := dedeltadeltarizer(delta_depth)
 
 	i := 0
-	for ; i < GetKFactor(); i++ {
+	k := len(c.Count)
+	for ; i < k; i++ {
 
 		//Get addr
 		addr_dd, used, bottom := readSignedHuff(src[idx:])
@@ -585,7 +606,7 @@ func (c *Coreblock) Deserialize(src []byte) {
 	}
 
 	//Clear out from a FULLZERO
-	for ; i < GetKFactor(); i++ {
+	for ; i < k; i++ {
 		c.Addr[i] = 0
 		c.Count[i] = 0
 		c.CGeneration[i] = 0

@@ -1,7 +1,6 @@
 package qtree
 
 import (
-	"github.com/iznauy/BTrDB/inter/bstore"
 	"math"
 )
 
@@ -17,7 +16,7 @@ func (n *QTreeNode) OpCountMean() (uint64, float64) {
 		}
 		return uint64(n.vector_block.Len), total / float64(n.vector_block.Len)
 	} else {
-		for i := 0; i < bstore.GetKFactor(); i++ {
+		for i := 0; i < n.tr.GetKFactor(); i++ {
 			if n.core_block.Count[i] == 0 {
 				continue
 			}
@@ -88,10 +87,10 @@ func (n *QTreeNode) OpReduce(pointwidth uint8, index uint64) (uint64, float64, f
 	if !n.isLeaf && pointwidth < n.PointWidth() {
 		log.Panic("Bad pointwidth for core. See code comment")
 	}
-	if pointwidth > n.PointWidth()+bstore.GetPWFactor() {
+	if pointwidth > n.PointWidth()+n.tr.GetPWFactor() {
 		log.Panic("Can't guarantee this PW")
 	}
-	maxpw := n.PointWidth() + bstore.GetPWFactor()
+	maxpw := n.PointWidth() + n.tr.GetPWFactor()
 	pwdelta := pointwidth - n.PointWidth()
 	width := int64(1) << pointwidth
 	maxidx := 1 << (maxpw - pointwidth)
