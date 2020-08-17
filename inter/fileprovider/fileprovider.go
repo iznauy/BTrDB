@@ -18,11 +18,10 @@ func init() {
 }
 
 var (
-	span time.Duration
+	span  time.Duration
 	times int64
-	mu sync.Mutex
+	mu    sync.Mutex
 )
-
 
 const NUMFILES = 256
 
@@ -128,11 +127,11 @@ func (sp *FileStorageProvider) provideFilesV2() {
 		}
 		base := rand.Intn(NUMFILES)
 		for i := 0; i < NUMFILES; i++ {
-			if !sp.favail[(base + i) % NUMFILES] {
+			if !sp.favail[(base+i)%NUMFILES] {
 				continue
 			}
 			available -= 1
-			sp.favail[(base + i) % NUMFILES] = false
+			sp.favail[(base+i)%NUMFILES] = false
 			sp.fidx <- (base + i) % NUMFILES
 		inner:
 			for {
@@ -250,8 +249,8 @@ func (sp *FileStorageProvider) LockSegment(uuid []byte) bprovider.Segment {
 	mu.Lock()
 	span += localSpan
 	times++
-	if times % 1000 == 0 {
-		fmt.Println("最近1000次获取文件锁，平均每次耗时：", float64(span.Milliseconds()) / 1000.0, "ms")
+	if times%1000 == 0 {
+		fmt.Println("最近1000次获取文件锁，平均每次耗时：", float64(span.Milliseconds())/1000.0, "ms")
 		times = 0
 		span = 0
 	}

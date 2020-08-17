@@ -6,8 +6,8 @@ import (
 )
 
 type CacheItem struct {
-	val   Datablock // 数据块
-	vaddr uint64 // 虚拟地址
+	val   Datablock  // 数据块
+	vaddr uint64     // 虚拟地址
 	newer *CacheItem // cache 形成了一个双向链表，便于实现 LRU 淘汰算法
 	older *CacheItem
 }

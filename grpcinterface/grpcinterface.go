@@ -62,12 +62,12 @@ type GrpcInterface struct {
 }
 
 type GrpcConfig struct {
-	Address        string
+	Address string
 
 	UseRateLimiter bool
 	ReadLimit      int64
 	WriteLimit     int64
-	LimitVariable       bool
+	LimitVariable  bool
 }
 
 func ServeGRPC(q *btrdb2.Quasar, config *GrpcConfig) {

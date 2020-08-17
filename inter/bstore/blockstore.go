@@ -2,9 +2,7 @@ package bstore
 
 import (
 	"errors"
-	"fmt"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
-	"github.com/iznauy/BTrDB/variable"
 	"os"
 	"strconv"
 	"sync"
@@ -16,12 +14,6 @@ import (
 )
 
 const LatestGeneration = uint64(^(uint64(0)))
-
-var (
-	span  time.Duration
-	times int64
-	mu    sync.Mutex
-)
 
 // 将 uuid 转化成比特数组
 func UUIDToMapKey(id uuid.UUID) [16]byte {
@@ -43,6 +35,7 @@ type BlockStore struct {
 	cachelen    uint64
 	cachemax    uint64
 	cachemaxmtx sync.RWMutex
+	cachepolicy CachePolicy
 
 	cachemiss uint64
 	cachehit  uint64
@@ -91,19 +84,19 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	bs.params = params
 
 	if params["metaprovider"] == "mysql" {
-		meta, err := metaprovider.NewMySQLMetaProvider(params);
+		meta, err := metaprovider.NewMySQLMetaProvider(params)
 		if err != nil {
 			lg.Panicf("init mysql metaprovider error: %v", err)
 		}
 		bs.meta = meta
 	} else if params["metaprovider"] == "mongodb" {
-		meta, err := metaprovider.NewMongoDBMetaProvider(params);
+		meta, err := metaprovider.NewMongoDBMetaProvider(params)
 		if err != nil {
 			lg.Panicf("init mongodb metaprovider error: %v", err)
 		}
 		bs.meta = meta
 	} else if params["metaprovider"] == "mem" {
-		meta, err := metaprovider.NewMemMetaProvider(params);
+		meta, err := metaprovider.NewMemMetaProvider(params)
 		if err != nil {
 			lg.Panicf("init mem metaprovider error: %v", err)
 		}
@@ -136,22 +129,25 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	}
 	bs.initCache(uint64(cachesz))
 
+	bs.cachepolicy = &NaiveCachePolicy{}
+	bs.cachepolicy.InitPolicy(&bs)
 	// 动态变化 cache
-	go func(bs *BlockStore) {
-		for {
-			// 定期激活
-			time.Sleep(10 * time.Second)
-
-			// cache 计算逻辑，需要改写
-			cacheMaxSize := variable.GetMaxCacheSize(nil)
-
-			bs.cachemaxmtx.Lock()
-			bs.cachemax = cacheMaxSize
-			bs.cachemaxmtx.Unlock()
-		}
-	}(&bs)
+	go bs.vary()
 
 	return &bs, nil
+}
+
+func (bs *BlockStore) vary() {
+	for {
+		// 定期激活
+		time.Sleep(10 * time.Second)
+
+		cacheMaxSize := bs.cachepolicy.GetCacheSize()
+
+		bs.cachemaxmtx.Lock()
+		bs.cachemax = cacheMaxSize
+		bs.cachemaxmtx.Unlock()
+	}
 }
 
 func (bs *BlockStore) GetCacheMaxSize() uint64 {
@@ -215,18 +211,7 @@ func (gen *Generation) Commit() (map[uint64]uint64, error) {
 
 	//then := time.Now()
 	// 写入底层存储
-	start := time.Now()
 	address_map := LinkAndStore([]byte(*gen.Uuid()), gen.blockstore, gen.blockstore.store, gen.vblocks, gen.cblocks)
-	localSpan := time.Now().Sub(start)
-	mu.Lock()
-	span += localSpan
-	times += 1
-	if times%1000 == 0 {
-		fmt.Println("最近1000次数据持久化，平均每次耗时：", float64(span.Milliseconds())/1000.0, "ms")
-		times = 0
-		span = 0
-	}
-	mu.Unlock()
 	// 写元信息到 mongodb
 	rootaddr, ok := address_map[gen.New_SB.root]
 	if !ok {
@@ -339,7 +324,7 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 	return nil
 }
 
-// 从 MongoDB 中加载超级块信息
+// 从存储引擎中加载超级块信息
 func (bs *BlockStore) LoadSuperblock(id uuid.UUID, generation uint64) *Superblock {
 	var (
 		meta *metaprovider.Meta

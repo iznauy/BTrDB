@@ -139,7 +139,7 @@ func DatablockGetBufferType(buf []byte) BlockType {
 写入的数据：
 1. 序列化数据块的类型、数据点的数量；
 2. 写入第一个点（数据，时间）
- */
+*/
 func (v *Vectorblock) Serialize(dst []byte) []byte {
 	idx := 3
 	dst[0] = byte(Vector)

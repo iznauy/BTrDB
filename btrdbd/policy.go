@@ -43,7 +43,7 @@ func (p *NaiveBufferPolicy) InitPolicy(q *Quasar, tr *openTree) {
 	p.begin = time.Now()
 	sb := p.q.bs.LoadSuperblock(p.tr.id, bstore.LatestGeneration)
 	if sb == nil {
-		p.newTree = false // TODO: 应当从 superblock 加载相关统计信息
+		p.newTree = false
 		if p.q.cfg.TransactionCoalesceEnable {
 			p.earlyTrip = p.q.cfg.TransactionCoalesceEarlyTrip
 			p.interval = p.q.cfg.TransactionCoalesceInterval
@@ -68,8 +68,8 @@ func (p *NaiveBufferPolicy) CommitNotice() {
 		}
 		return
 	}
-	p.freq = p.decay * p.freq + (1 - p.decay) * (float64(p.tr.store.Len()) / time.Now().Sub(p.begin).Seconds())
-	p.earlyTrip = uint64(p.freq * float64(p.interval) + 10)
+	p.freq = p.decay*p.freq + (1-p.decay)*(float64(p.tr.store.Len())/time.Now().Sub(p.begin).Seconds())
+	p.earlyTrip = uint64(p.freq*float64(p.interval) + 10)
 }
 
 func (p *NaiveBufferPolicy) AllocationNotice() {

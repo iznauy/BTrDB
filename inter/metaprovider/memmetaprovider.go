@@ -18,7 +18,7 @@ func NewMemMetaProvider(_ map[string]string) (*MemMetaProvider, error) {
 	}
 	return &MemMetaProvider{
 		bucketSize: uint64(bucketSize),
-		buckets: buckets,
+		buckets:    buckets,
 	}, nil
 }
 
@@ -58,7 +58,7 @@ func newMemBucket() *memBucket {
 	}
 }
 
-func (mem * memBucket) get(id string, version uint64) (*Meta, bool) {
+func (mem *memBucket) get(id string, version uint64) (*Meta, bool) {
 	mem.mu.RLock()
 	defer mem.mu.RUnlock()
 	if ent, ok := mem.entries[id]; ok {
@@ -67,7 +67,7 @@ func (mem * memBucket) get(id string, version uint64) (*Meta, bool) {
 	return nil, false
 }
 
-func (mem * memBucket) add(m *Meta) {
+func (mem *memBucket) add(m *Meta) {
 	mem.mu.Lock()
 	ent, ok := mem.entries[m.Uuid]
 	if !ok {

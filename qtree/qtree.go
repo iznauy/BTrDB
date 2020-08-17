@@ -727,7 +727,7 @@ func (n *QTreeNode) InsertValues(records []Record) (*QTreeNode, error) {
 			}
 		}
 		//log.Debug("reched end of records. flushing to child %v", buckt)
-		newchild, err := n.wchild(lbuckt, (len(records) - lidx) < bstore.GetVSize()).InsertValues(records[lidx:])
+		newchild, err := n.wchild(lbuckt, (len(records)-lidx) < bstore.GetVSize()).InsertValues(records[lidx:])
 		//log.Debug("Address of new child was %08x", newchild.ThisAddr())
 		if err != nil {
 			log.Panicf("%v", err)

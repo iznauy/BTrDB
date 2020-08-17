@@ -6,8 +6,8 @@ import (
 )
 
 /**
- OpCountMean, OpMin, OpMax 都是对整个 QTreeNode 进行统计
- */
+OpCountMean, OpMin, OpMax 都是对整个 QTreeNode 进行统计
+*/
 func (n *QTreeNode) OpCountMean() (uint64, float64) {
 	total := 0.0
 	cnt := uint64(0)

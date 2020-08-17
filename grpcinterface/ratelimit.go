@@ -16,6 +16,10 @@ type GrpcWriteRequest interface {
 	writeBytes() int64
 }
 
+type RateLimiter interface {
+	Read(req GrpcReadRequest) bool
+	Write(req GrpcWriteRequest) bool
+}
 
 type rateLimiter struct {
 	readLimiter int64
@@ -51,24 +55,25 @@ func newLimiter(readLimiter, writeLimiter int64, variable bool) *rateLimiter {
 func (r *rateLimiter) vary() {
 	for {
 		time.Sleep(30 * time.Second)
-		readBytes := atomic.SwapInt64(&r.readBytes, 0)
-		writeBytes := atomic.SwapInt64(&r.writeBytes, 0)
 
-		// 访问决策模块获取更新的限速速率
-		_ = readBytes
-		_ = writeBytes
-		readLimiter := r.readLimiter
-		writeLimiter := r.writeLimiter
-		r.readLimiter = readLimiter
-		r.writeLimiter = writeLimiter
+		// 访问决策模块获取更新的限速速率，暂时是 mock 程序
+		r.readLimiter, r.writeLimiter = r.nextReadWriteLimiter()
 
 		// 变更限流速率
 		r.mu.Lock()
-		r.readBucket = ratelimit.NewBucketWithRate(float64(readLimiter), 5*readLimiter)
-		writeBucket, _ := leakybucket.New().Create("", uint(writeLimiter), time.Second)
+		r.readBucket = ratelimit.NewBucketWithRate(float64(r.readLimiter), 5*r.readLimiter)
+		writeBucket, _ := leakybucket.New().Create("", uint(r.writeLimiter), time.Second)
 		r.writeBucket = writeBucket
 		r.mu.Unlock()
+
+		// 原子操作清空统计信息
+		_ = atomic.SwapInt64(&r.readBytes, 0)
+		_ = atomic.SwapInt64(&r.writeBytes, 0)
 	}
+}
+
+func (r *rateLimiter) nextReadWriteLimiter() (int64, int64) { // TODO: 添加策略
+	return r.readLimiter, r.writeLimiter
 }
 
 func (r *rateLimiter) Read(req GrpcReadRequest) bool {
@@ -105,7 +110,7 @@ func (r *rateLimiter) Write(req GrpcWriteRequest) bool {
 }
 
 func (req *InsertRequest) writeBytes() int64 {
-	return int64(len(req.Uuid) + len(req.Values) * 24) // 24 = 8（指针大小）+ 8（时间戳大小）+ 8（数据大小）
+	return int64(len(req.Uuid) + len(req.Values)*24) // 24 = 8（指针大小）+ 8（时间戳大小）+ 8（数据大小）
 }
 
 func (req *BatchInsertRequest) writeBytes() int64 {
@@ -113,7 +118,7 @@ func (req *BatchInsertRequest) writeBytes() int64 {
 	for _, insertReq := range req.Inserts {
 		bytes += insertReq.writeBytes()
 	}
-	return bytes + int64(len(req.Inserts) * 8)
+	return bytes + int64(len(req.Inserts)*8)
 }
 
 func (req *DeleteRequest) writeBytes() int64 {
