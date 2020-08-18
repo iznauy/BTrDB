@@ -16,7 +16,9 @@ type meta struct {
 	ID       uint   `gorm:"primary_key"`
 	Uuid     string `gorm:"type:varchar(40);index:uuid_version;not null;"`
 	Version  uint64 `gorm:"index:uuid_version;not null;"`
-	Root     uint64
+	Root     uint64 `gorm:"not null;"`
+	K        uint16 `gorm:"not null;"`
+	V        uint32 `gorm:"not null;"`
 	Unlinked bool
 }
 
@@ -25,6 +27,8 @@ func fromMeta(m *Meta) *meta {
 		Uuid:     m.Uuid,
 		Version:  m.Version,
 		Root:     m.Root,
+		K:        m.K,
+		V:        m.V,
 		Unlinked: m.Unlinked,
 	}
 }
@@ -34,6 +38,8 @@ func toMeta(m *meta) *Meta {
 		Uuid:     m.Uuid,
 		Version:  m.Version,
 		Root:     m.Root,
+		K:        m.K,
+		V:        m.V,
 		Unlinked: m.Unlinked,
 	}
 }
