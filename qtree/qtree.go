@@ -6,6 +6,7 @@ import (
 	"github.com/op/go-logging"
 	"math"
 	"sort"
+	"time"
 )
 
 var log *logging.Logger
@@ -586,7 +587,7 @@ func (n *QTreeNode) ConvertToCore(newvals []Record) *QTreeNode {
  * This function is for inserting a large chunk of data. It is required
  * that the data is sorted, so we do that here
  */
-func (tr *QTree) InsertValues(buffer Buffer) (e error) {
+func (tr *QTree) InsertValues(buffer Buffer, span time.Duration) (e error) {
 	if tr.gen == nil {
 		return ErrBadInsert
 	}
@@ -606,10 +607,12 @@ func (tr *QTree) InsertValues(buffer Buffer) (e error) {
 	if len(proc_records) == 0 {
 		return ErrBadInsert
 	}
-	// 在这儿选择合适的 K V
+
 	if !tr.inited {
 		tr.inited = true
-		tr.gen.New_SB.InitNewTS(64, 1024) // TODO: 策略
+		// 选择一个合适的 K V
+		K, V := tr.policy.DecideKAndV(buffer, span)
+		tr.gen.New_SB.InitNewTS(K, V)
 		rt, err := tr.NewCoreNode(ROOTSTART, tr.GetRootPW())
 		if err != nil {
 			log.Panicf("%v", err)

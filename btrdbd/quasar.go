@@ -23,6 +23,7 @@ type openTree struct {
 	store  qtree.Buffer
 	id     uuid.UUID
 	sigEC  chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
+	begin  time.Time
 	policy BufferPolicy
 }
 
@@ -90,6 +91,7 @@ type Quasar struct {
 func newOpenTree(id uuid.UUID) *openTree {
 	return &openTree{
 		id: id,
+		begin: time.Now(),
 	}
 }
 
@@ -162,12 +164,13 @@ func (t *openTree) commit(q *Quasar) {
 	if err != nil {
 		log.Panic(err)
 	}
-	if err := tr.InsertValues(t.store); err != nil {
+	if err := tr.InsertValues(t.store, time.Now().Sub(t.begin)); err != nil {
 		log.Error("BAD INSERT: ", err)
 	}
 	tr.Commit()
 	t.store = nil
 	t.policy.CommitNotice()
+	t.begin = time.Now()
 }
 
 // 插入数据点，如果没达到 buffer 限制，将数据插入到 buffer，否则将会提前刷新数据

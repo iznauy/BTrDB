@@ -26,6 +26,7 @@ type QTree struct {
 	root     *QTreeNode
 	commited bool
 	inited   bool
+	policy   QTreePolicy
 }
 
 func (q *QTree) GetKFactor() int {
@@ -34,11 +35,6 @@ func (q *QTree) GetKFactor() int {
 
 func (q *QTree) GetVSize() int {
 	return int(q.sb.V())
-}
-
-func (q *QTree) GetDBSize() int {
-	vsize := q.GetVSize()
-	return 2 + 20*vsize
 }
 
 func (q *QTree) GetPWFactor() uint8 {
@@ -232,6 +228,8 @@ func NewWriteQTree(bs *bstore.BlockStore, id uuid.UUID) (*QTree, error) {
 			rv.root = rt
 		}
 		rv.inited = true
+	} else {
+		rv.policy = &NaiveQTreePolicy{}
 	}
 
 	return rv, nil
