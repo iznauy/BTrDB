@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/iznauy/BTrDB/btrdbd"
+	"github.com/iznauy/BTrDB/conf"
 	"github.com/iznauy/BTrDB/grpcinterface"
+	"github.com/iznauy/BTrDB/magic"
 	"os"
 	"os/signal"
 	"runtime"
@@ -27,7 +29,7 @@ func init() {
 var createDB = flag.Bool("makedb", false, "create a new database")
 
 func main() {
-	loadConfig()
+	conf.LoadConfig()
 	flag.Parse()
 
 	go func() {
@@ -36,7 +38,7 @@ func main() {
 			fmt.Println("Num goroutines: ", runtime.NumGoroutine())
 		}
 	}()
-	if Configuration.Debug.Cpuprofile {
+	if conf.Configuration.Debug.Cpuprofile {
 		f, err := os.Create("profile.cpu")
 		if err != nil {
 			log.Panicf("Error creating CPU profile: %v", err)
@@ -54,41 +56,42 @@ func main() {
 
 	if *createDB {
 		fmt.Printf("Creating a new database\n")
-		bstore.CreateDatabase(Params)
+		bstore.CreateDatabase(conf.Params)
 		fmt.Printf("Done\n")
 		os.Exit(0)
 	}
 	nCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nCPU)
+	magic.InitMagicEngine() // 初始化决策引擎
 	cfg := btrdbd.QuasarConfig{
-		DatablockCacheSize:        uint64(Configuration.Cache.BlockCache),
-		TransactionCoalesceEnable: Configuration.Coalescence.Enable,
-		ForestCount:               uint64(*Configuration.Forest.Count),
-		Params:                    Params,
+		DatablockCacheSize:        uint64(conf.Configuration.Cache.BlockCache),
+		TransactionCoalesceEnable: conf.Configuration.Coalescence.Enable,
+		ForestCount:               uint64(*conf.Configuration.Forest.Count),
+		Params:                    conf.Params,
 	}
-	if Configuration.Coalescence.Enable {
-		cfg.TransactionCoalesceInterval = uint64(*Configuration.Coalescence.Interval)
-		cfg.TransactionCoalesceEarlyTrip = uint64(*Configuration.Coalescence.Earlytrip)
+	if conf.Configuration.Coalescence.Enable {
+		cfg.TransactionCoalesceInterval = uint64(*conf.Configuration.Coalescence.Interval)
+		cfg.TransactionCoalesceEarlyTrip = uint64(*conf.Configuration.Coalescence.Earlytrip)
 	}
 	q, err := btrdbd.NewQuasar(&cfg)
 	if err != nil {
 		log.Panicf("error: ", err)
 	}
 
-	if Configuration.GRPC.Enabled {
+	if conf.Configuration.GRPC.Enabled {
 		grpcConfig := grpcinterface.GrpcConfig{
-			Address:        *Configuration.GRPC.Address + ":" + strconv.FormatInt(int64(*Configuration.GRPC.Port), 10),
-			UseRateLimiter: Configuration.GRPC.UseRateLimiter,
+			Address:        *conf.Configuration.GRPC.Address + ":" + strconv.FormatInt(int64(*conf.Configuration.GRPC.Port), 10),
+			UseRateLimiter: conf.Configuration.GRPC.UseRateLimiter,
 		}
 		if grpcConfig.UseRateLimiter {
-			grpcConfig.LimitVariable = *Configuration.GRPC.LimitVariable
-			grpcConfig.ReadLimit = int64(*Configuration.GRPC.ReadLimit)
-			grpcConfig.WriteLimit = int64(*Configuration.GRPC.WriteLimit)
+			grpcConfig.LimitVariable = *conf.Configuration.GRPC.LimitVariable
+			grpcConfig.ReadLimit = int64(*conf.Configuration.GRPC.ReadLimit)
+			grpcConfig.WriteLimit = int64(*conf.Configuration.GRPC.WriteLimit)
 		}
 		go grpcinterface.ServeGRPC(q, &grpcConfig)
 	}
 
-	if Configuration.Debug.Heapprofile {
+	if conf.Configuration.Debug.Heapprofile {
 		go func() {
 			idx := 0
 			for {
@@ -125,7 +128,7 @@ func main() {
 					break
 				}
 			}
-			if Configuration.Debug.Heapprofile {
+			if conf.Configuration.Debug.Heapprofile {
 				log.Warning("writing heap profile")
 				f, err := os.Create("profile.heap.FIN")
 				if err != nil {

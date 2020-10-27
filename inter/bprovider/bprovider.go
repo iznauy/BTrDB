@@ -20,9 +20,9 @@ import (
 	"errors"
 )
 
-var ErrNoSpace = errors.New("No more space")
-var ErrInvalidArgument = errors.New("Invalid argument")
-var ErrExists = errors.New("File exists")
+var ErrNoSpace = errors.New("no more space")
+var ErrInvalidArgument = errors.New("invalid argument")
+var ErrExists = errors.New("file exists")
 
 type Segment interface {
 	//Returns the address of the first free word in the segment when it was locked

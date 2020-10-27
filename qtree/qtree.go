@@ -17,13 +17,13 @@ func init() {
 
 //but we still have support for dates < 1970
 
-var ErrNoSuchStream = errors.New("No such stream")
-var ErrNotLeafNode = errors.New("Not a leaf node")
-var ErrImmutableTree = errors.New("Tree is immutable")
-var ErrIdxNotFound = errors.New("Index not found")
-var ErrNoSuchPoint = errors.New("No such point")
-var ErrBadInsert = errors.New("Bad insert")
-var ErrBadDelete = errors.New("Bad delete")
+var ErrNoSuchStream = errors.New("no such stream")
+var ErrNotLeafNode = errors.New("not a leaf node")
+var ErrImmutableTree = errors.New("tree is immutable")
+var ErrIdxNotFound = errors.New("index not found")
+var ErrNoSuchPoint = errors.New("no such point")
+var ErrBadInsert = errors.New("bad insert")
+var ErrBadDelete = errors.New("bad delete")
 
 //It is important to note that if backwards is true, then time is exclusive. So if
 //a record exists with t=80 and t=100, and you query with t=100, backwards=true, you will get the t=80
@@ -608,8 +608,8 @@ func (tr *QTree) InsertValues(buffer Buffer, span time.Duration) (e error) {
 		return ErrBadInsert
 	}
 
-	if !tr.inited {
-		tr.inited = true
+	if !tr.initialized {
+		tr.initialized = true
 		// 选择一个合适的 K V
 		K, V := tr.policy.DecideKAndV(buffer, span)
 		tr.gen.New_SB.InitNewTS(K, V)
@@ -643,7 +643,7 @@ func (tr *QTree) DeleteRange(start int64, end int64) error {
 	if tr.gen == nil {
 		return ErrBadDelete
 	}
-	if !tr.inited { // 没数据凑什么热闹啊
+	if !tr.initialized { // 没数据凑什么热闹啊
 		return nil
 	}
 	n := tr.root.DeleteRange(start, end)

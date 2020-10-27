@@ -21,7 +21,7 @@ type BufferPolicy interface {
 	AllocationNotice()
 
 	IsNewTree() bool
-	GetEarlyTripTime() uint64
+	GetInterval() uint64
 	GetBufferMaxSize() uint64
 	GetBufferType() BufferType
 }
@@ -30,7 +30,7 @@ type NaiveBufferPolicy struct {
 	q  *Quasar
 	tr *openTree
 
-	newTree   bool // 新的时间序列，强制提交时间相对久一些，并且在建树的时候按照
+	newTree   bool // 新的时间序列，强制提交时间相对久一些
 	earlyTrip uint64
 	interval  uint64 // 定期提交实际上不应该被优化
 	freq      float64
@@ -80,7 +80,7 @@ func (p *NaiveBufferPolicy) IsNewTree() bool {
 	return p.newTree
 }
 
-func (p *NaiveBufferPolicy) GetEarlyTripTime() uint64 {
+func (p *NaiveBufferPolicy) GetInterval() uint64 {
 	return p.interval
 }
 

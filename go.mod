@@ -10,6 +10,7 @@ require (
 	github.com/juju/ratelimit v1.0.1
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/pborman/uuid v1.2.0
+	github.com/pkg/errors v0.9.1
 	github.com/yangwenmai/ratelimit v0.0.0-20180104140304-44221c2292e1
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect

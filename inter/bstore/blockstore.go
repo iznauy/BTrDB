@@ -3,6 +3,7 @@ package bstore
 import (
 	"errors"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
+	"github.com/iznauy/BTrDB/magic"
 	"os"
 	"strconv"
 	"sync"
@@ -35,7 +36,6 @@ type BlockStore struct {
 	cachelen    uint64
 	cachemax    uint64
 	cachemaxmtx sync.RWMutex
-	cachepolicy CachePolicy
 
 	cachemiss uint64
 	cachehit  uint64
@@ -134,8 +134,6 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	}
 	bs.initCache(uint64(cachesz))
 
-	bs.cachepolicy = &NaiveCachePolicy{}
-	bs.cachepolicy.InitPolicy(&bs)
 	// 动态变化 cache
 	go bs.vary()
 
@@ -147,8 +145,18 @@ func (bs *BlockStore) vary() {
 		// 定期激活
 		time.Sleep(10 * time.Second)
 
-		cacheMaxSize := bs.cachepolicy.GetCacheSize()
+		// 更新统计信息
+		cacheStatistics := &magic.CacheStatistics{
+			CacheHit:     bs.cachehit,
+			CacheMiss:    bs.cachemiss,
+			CacheSize:    bs.cachemax,
+			LeafCount:    0,
+			NonLeafCount: bs.cachelen,
+		}
+		magic.Engine.UpdateCache(cacheStatistics)
 
+		// 获取最新决策
+		cacheMaxSize := magic.Engine.GetCacheMaxSize()
 		bs.cachemaxmtx.Lock()
 		bs.cachemax = cacheMaxSize
 		bs.cachemaxmtx.Unlock()

@@ -18,7 +18,7 @@ func (bs *BlockStore) initCache(size uint64) {
 	go func() {
 		for {
 			lg.Info(fmt.Sprintf("Cachestats: %d misses, %d hits, %.2f %%",
-				bs.cachemiss, bs.cachehit, (float64(bs.cachehit*100) / float64(bs.cachemiss+bs.cachehit))))
+				bs.cachemiss, bs.cachehit, float64(bs.cachehit*100) / float64(bs.cachemiss+bs.cachehit)))
 			time.Sleep(5 * time.Second)
 		}
 	}()

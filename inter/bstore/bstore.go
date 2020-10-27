@@ -11,3 +11,7 @@ var lg *logging.Logger
 const (
 	RELOCATION_BASE = 0xFF00000000000000
 )
+
+func init() {
+	lg = logging.MustGetLogger("log")
+}

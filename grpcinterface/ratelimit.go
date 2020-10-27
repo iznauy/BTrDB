@@ -1,6 +1,7 @@
 package grpcinterface
 
 import (
+	"github.com/iznauy/BTrDB/magic"
 	"github.com/juju/ratelimit"
 	"github.com/yangwenmai/ratelimit/leakybucket"
 	"sync"
@@ -31,6 +32,7 @@ type rateLimiter struct {
 	writeBucket  leakybucket.BucketI
 
 	variable bool // 限流是否跟随系统负载动态变化
+	begin    time.Time
 	mu       sync.RWMutex
 }
 
@@ -46,6 +48,7 @@ func newLimiter(readLimiter, writeLimiter int64, variable bool) *rateLimiter {
 	r.writeBucket = writeBucket
 
 	if variable {
+		r.begin = time.Now()
 		go r.vary()
 	}
 
@@ -55,9 +58,20 @@ func newLimiter(readLimiter, writeLimiter int64, variable bool) *rateLimiter {
 func (r *rateLimiter) vary() {
 	for {
 		time.Sleep(30 * time.Second)
+		readBytes := atomic.SwapInt64(&r.readBytes, 0)
+		writeBytes := atomic.SwapInt64(&r.writeBytes, 0)
+		span := time.Now().Sub(r.begin)
+		dataTrafficStatistics := &magic.DataTrafficStatistics{
+			ReadBytes:    readBytes,
+			WriteBytes:   writeBytes,
+			ReadLimiter:  r.readLimiter,
+			WriteLimiter: r.writeLimiter,
+			Span:         span,
+		}
+		magic.Engine.UpdateDataTraffic(dataTrafficStatistics)
 
-		// 访问决策模块获取更新的限速速率，暂时是 mock 程序
-		r.readLimiter, r.writeLimiter = r.nextReadWriteLimiter()
+		// 访问决策模块获取更新的限速速率
+		r.readLimiter, r.writeLimiter = magic.Engine.GetReadWriteLimiter()
 
 		// 变更限流速率
 		r.mu.Lock()
@@ -65,15 +79,8 @@ func (r *rateLimiter) vary() {
 		writeBucket, _ := leakybucket.New().Create("", uint(r.writeLimiter), time.Second)
 		r.writeBucket = writeBucket
 		r.mu.Unlock()
-
-		// 原子操作清空统计信息
-		_ = atomic.SwapInt64(&r.readBytes, 0)
-		_ = atomic.SwapInt64(&r.writeBytes, 0)
+		r.begin = time.Now()
 	}
-}
-
-func (r *rateLimiter) nextReadWriteLimiter() (int64, int64) { // TODO: 添加策略
-	return r.readLimiter, r.writeLimiter
 }
 
 func (r *rateLimiter) Read(req GrpcReadRequest) bool {

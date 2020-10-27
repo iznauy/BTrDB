@@ -1,4 +1,4 @@
-package main
+package conf
 
 import (
 	"fmt"
@@ -50,7 +50,7 @@ type Config struct {
 var Configuration Config
 var Params map[string]string
 
-func loadConfig() {
+func LoadConfig() {
 	found := false
 	err := gcfg.ReadFileInto(&Configuration, "./btrdb.conf")
 	if err != nil {
@@ -65,9 +65,9 @@ func loadConfig() {
 	}
 
 	if !found {
-		err := gcfg.ReadFileInto(&Configuration, "/etc/btrdbd/btrdbd.conf")
+		err := gcfg.ReadFileInto(&Configuration, "/etc/btrdbd/btrdb.conf")
 		if err != nil {
-			fmt.Printf("Could not load configuration file '/etc/btrdbd/btrdbd.conf':\n%v\n", err)
+			fmt.Printf("Could not load configuration file '/etc/btrdbd/btrdb.conf':\n%v\n", err)
 		} else {
 			found = true
 		}

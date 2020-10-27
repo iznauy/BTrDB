@@ -2,7 +2,6 @@ package qtree
 
 import (
 	"container/list"
-	"time"
 )
 
 type Buffer interface {
@@ -81,12 +80,4 @@ func (b *LinkedListBuffer) ToSlice() []Record {
 		ele = ele.Next()
 	}
 	return records
-}
-
-func (b *LinkedListBuffer) CreatedAt() time.Duration {
-
-}
-
-func (b *LinkedListBuffer) CommittedAt() time.Duration {
-
 }

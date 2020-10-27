@@ -20,13 +20,13 @@ const MinimumTime = 0
 const MaximumTime = 64 << 56
 
 type QTree struct {
-	sb       *bstore.Superblock // 超级块 super block
-	bs       *bstore.BlockStore
-	gen      *bstore.Generation // Read Only Tree 中 gen 字段为空
-	root     *QTreeNode
-	commited bool
-	inited   bool
-	policy   QTreePolicy
+	sb          *bstore.Superblock // 超级块 super block
+	bs          *bstore.BlockStore
+	gen         *bstore.Generation // Read Only Tree 中 gen 字段为空
+	root        *QTreeNode
+	committed   bool
+	initialized bool
+	policy      TreePolicy
 }
 
 func (q *QTree) GetKFactor() int {
@@ -88,7 +88,7 @@ func (s RecordSlice) Less(i, j int) bool {
 }
 
 func (tr *QTree) Commit() {
-	if tr.commited {
+	if tr.committed {
 		log.Panicf("Tree alredy comitted")
 	}
 	if tr.gen == nil {
@@ -96,7 +96,7 @@ func (tr *QTree) Commit() {
 	}
 
 	tr.gen.Commit()
-	tr.commited = true
+	tr.committed = true
 	tr.gen = nil
 
 }
@@ -189,7 +189,7 @@ func NewReadQTree(bs *bstore.BlockStore, id uuid.UUID, generation uint64) (*QTre
 	if sb == nil {
 		return nil, ErrNoSuchStream
 	}
-	rv := &QTree{sb: sb, bs: bs, inited: true}
+	rv := &QTree{sb: sb, bs: bs, initialized: true}
 	if sb.Root() != 0 {
 		rt, err := rv.LoadNode(sb.Root(), sb.Gen(), rv.GetRootPW(), ROOTSTART) // 加载根节点信息
 		if err != nil {
@@ -205,10 +205,10 @@ func NewReadQTree(bs *bstore.BlockStore, id uuid.UUID, generation uint64) (*QTre
 func NewWriteQTree(bs *bstore.BlockStore, id uuid.UUID) (*QTree, error) {
 	gen := bs.ObtainGeneration(id)
 	rv := &QTree{
-		sb:     gen.New_SB,
-		gen:    gen,
-		bs:     bs,
-		inited: false,
+		sb:          gen.New_SB,
+		gen:         gen,
+		bs:          bs,
+		initialized: false,
 	}
 
 	if !gen.IsNewTS() {
@@ -227,9 +227,9 @@ func NewWriteQTree(bs *bstore.BlockStore, id uuid.UUID) (*QTree, error) {
 			}
 			rv.root = rt
 		}
-		rv.inited = true
+		rv.initialized = true
 	} else {
-		rv.policy = &NaiveQTreePolicy{}
+		rv.policy = &NaiveTreePolicy{}
 	}
 
 	return rv, nil

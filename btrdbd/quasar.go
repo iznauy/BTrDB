@@ -194,6 +194,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 	}
 	if tr.store == nil {
 		//Empty store
+		tr.policy.AllocationNotice()
 		bufferType := tr.policy.GetBufferType()
 		switch bufferType {
 		case Slice:
@@ -207,8 +208,8 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		}
 		tr.sigEC = make(chan bool, 1)
 		//Also spawn the coalesce timeout goroutine
-		go func(abrt chan bool) {
-			tmt := time.After(time.Duration(tr.policy.GetEarlyTripTime()) * time.Millisecond)
+		go func(abort chan bool) {
+			tmt := time.After(time.Duration(tr.policy.GetInterval()) * time.Millisecond)
 			select {
 			case <-tmt:
 				//do coalesce
@@ -217,7 +218,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 				//log.Debug("Coalesce timeout %v", id.String())
 				tr.commit(q)
 				mtx.Unlock()
-			case <-abrt:
+			case <-abort:
 				return
 			}
 		}(tr.sigEC)
