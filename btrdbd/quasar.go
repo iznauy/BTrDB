@@ -3,6 +3,8 @@ package btrdbd
 import (
 	"fmt"
 	"github.com/cespare/xxhash"
+	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/event"
 	"sync"
 	"time"
 
@@ -23,6 +25,7 @@ type openTree struct {
 	store  qtree.Buffer
 	id     uuid.UUID
 	sigEC  chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
+	new    bool // TODO: New Tree 相关逻辑判断转移
 	begin  time.Time
 	policy BufferPolicy
 }
@@ -90,7 +93,7 @@ type Quasar struct {
 
 func newOpenTree(id uuid.UUID) *openTree {
 	return &openTree{
-		id: id,
+		id:    id,
 		begin: time.Now(),
 	}
 }
@@ -194,14 +197,26 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 	}
 	if tr.store == nil {
 		//Empty store
-		tr.policy.AllocationNotice()
-		bufferType := tr.policy.GetBufferType()
+		e := &event.Event{
+			Type:   event.CreateBuffer,
+			Source: id,
+			Time:   time.Now(),
+			Params: map[string]interface{}{},
+		}
+
+		bufferType := brain.B.GetBufferType(id)
+		bufferMaxSize := brain.B.GetBufferMaxSize(id)
+		bufferCommitInterval := brain.B.GetCommitInterval(id)
+		e.Params["type"] = bufferType
+		e.Params["max_size"] = bufferMaxSize
+		e.Params["commit_interval"] = bufferCommitInterval
+		brain.B.Emit(e)
 		switch bufferType {
-		case Slice:
+		case brain.Slice:
 			tr.store = qtree.NewSliceBuffer()
-		case PreAllocatedSlice:
-			tr.store = qtree.NewPreAllocatedSliceBuffer(tr.policy.GetBufferMaxSize())
-		case LinkedList:
+		case brain.PreAllocatedSlice:
+			tr.store = qtree.NewPreAllocatedSliceBuffer(bufferMaxSize)
+		case brain.LinkedList:
 			tr.store = qtree.NewLinkedListBuffer()
 		default:
 			log.Fatalf("unknown buffer type: %d", bufferType)
@@ -209,7 +224,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		tr.sigEC = make(chan bool, 1)
 		//Also spawn the coalesce timeout goroutine
 		go func(abort chan bool) {
-			tmt := time.After(time.Duration(tr.policy.GetInterval()) * time.Millisecond)
+			tmt := time.After(time.Duration(bufferCommitInterval) * time.Millisecond)
 			select {
 			case <-tmt:
 				//do coalesce
@@ -224,7 +239,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		}(tr.sigEC)
 	}
 	tr.store.Write(r)
-	if uint64(tr.store.Len()) >= tr.policy.GetBufferMaxSize() {
+	if uint64(tr.store.Len()) >= brain.B.GetBufferMaxSize(id) {
 		tr.sigEC <- true
 		log.Debug("Coalesce early trip %v", id.String())
 		tr.commit(q)

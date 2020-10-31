@@ -1,9 +1,12 @@
 package bstore
 
 import (
+	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/event"
 	"log"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/iznauy/BTrDB/inter/bprovider"
 )
@@ -103,5 +106,18 @@ func LinkAndStore(uuid []byte, bs *BlockStore, bp bprovider.StorageProvider, vbl
 	for _, v := range loaned_servbufs {
 		ser_buf_pool.Put(v)
 	}
+
+	// emit write block event
+	e := &event.Event{
+		Type:   event.WriteBlock,
+		Source: uuid,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"vector_count": len(vblocks),
+			"core_count": len(cblocks),
+		},
+	}
+	brain.B.Emit(e)
+
 	return backpatch
 }

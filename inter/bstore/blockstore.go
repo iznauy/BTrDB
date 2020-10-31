@@ -2,6 +2,8 @@ package bstore
 
 import (
 	"errors"
+	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
 	"github.com/iznauy/BTrDB/magic"
 	"os"
@@ -305,6 +307,16 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 	if db != nil {
 		return db
 	}
+
+	// emit read block event
+	e := &event.Event{
+		Type: event.ReadBlock,
+		Source: uuid,
+		Time: time.Now(),
+		Params: map[string]interface{}{},
+	}
+	defer brain.B.Emit(e)
+
 	syncbuf := block_buf_pool.Get().([]byte)
 	trimbuf := bs.store.Read([]byte(uuid), addr, syncbuf)
 	switch DatablockGetBufferType(trimbuf) {
@@ -323,6 +335,7 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 		rv.PointWidth = impl_Pointwidth
 		rv.StartTime = impl_StartTime
 		bs.cachePut(addr, rv)
+		e.Params["core_count"] = int(1)
 		return rv
 	case Vector:
 		rv := &Vectorblock{}
@@ -335,6 +348,7 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 		rv.PointWidth = impl_Pointwidth
 		rv.StartTime = impl_StartTime
 		bs.cachePut(addr, rv)
+		e.Params["vector_count"] = int(1)
 		return rv
 	}
 	lg.Panic("Strange datablock type")

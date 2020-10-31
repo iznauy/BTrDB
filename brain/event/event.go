@@ -17,7 +17,7 @@ var (
 
 type Event struct {
 	Type   EventType
-	Source [16]byte
+	Source []byte
 	Time   time.Time
 	Params map[string]interface{}
 }

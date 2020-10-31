@@ -2,6 +2,7 @@ package qtree
 
 import (
 	"container/list"
+	"github.com/pborman/uuid"
 )
 
 type Buffer interface {
@@ -13,7 +14,7 @@ type Buffer interface {
 
 type SliceBuffer []Record
 
-func NewSliceBuffer() Buffer {
+func NewSliceBuffer(id uuid.UUID) Buffer {
 	return SliceBuffer(make([]Record, 20))
 }
 

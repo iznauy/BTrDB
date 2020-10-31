@@ -4,6 +4,7 @@ import (
 	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/iznauy/BTrDB/brain/handler"
 	"github.com/iznauy/BTrDB/brain/stats"
+	"github.com/pborman/uuid"
 )
 
 var B *Brain
@@ -42,4 +43,28 @@ func (b *Brain) Emit(event *event.Event) {
 			break
 		}
 	}
+}
+
+func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
+	return 1000000000, 1000000000
+}
+
+func (b *Brain) GetCommitInterval(id uuid.UUID) uint64 {
+	return 10000
+}
+
+func (b *Brain) GetBufferMaxSize(id uuid.UUID) uint64 {
+	return 10000
+}
+
+func (b *Brain) GetBufferType(id uuid.UUID) BufferType {
+	return Slice
+}
+
+func (b *Brain) GetCacheMaxSize() uint64 {
+	return 10000
+}
+
+func (b *Brain) GetKAndFForNewTimeSeries() (K uint16, F uint32) {
+	return 6, 1024
 }
