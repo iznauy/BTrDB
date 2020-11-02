@@ -2,7 +2,10 @@ package qtree
 
 import (
 	"container/list"
+	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/pborman/uuid"
+	"time"
 )
 
 type Buffer interface {
@@ -12,41 +15,61 @@ type Buffer interface {
 	ToSlice() []Record
 }
 
-type SliceBuffer []Record
+type SliceBuffer struct {
+	id      uuid.UUID
+	records []Record
+}
 
 func NewSliceBuffer(id uuid.UUID) Buffer {
-	return SliceBuffer(make([]Record, 20))
+	return NewPreAllocatedSliceBuffer(id, 1)
 }
 
-func NewPreAllocatedSliceBuffer(bufferSize uint64) Buffer {
-	return SliceBuffer(make([]Record, bufferSize))
+func NewPreAllocatedSliceBuffer(id uuid.UUID, bufferSize uint64) Buffer {
+	return &SliceBuffer{
+		id:      id,
+		records: make([]Record, 0, bufferSize),
+	}
 }
 
-func (b SliceBuffer) Get(i int) Record {
-	if i < 0 || i >= len(b) {
+func (b *SliceBuffer) Get(i int) Record {
+	if i < 0 || i >= len(b.records) {
 		panic("index out of bound!")
 	}
-	return b[i]
+	return b.records[i]
 }
 
-func (b SliceBuffer) Len() int {
-	return len(b)
+func (b *SliceBuffer) Len() int {
+	return len(b.records)
 }
 
-func (b SliceBuffer) Write(records []Record) Buffer {
-	return SliceBuffer(append([]Record(b), records...))
+func (b *SliceBuffer) Write(records []Record) Buffer {
+	b.records = append(b.records, records...)
+	e := &event.Event{
+		Type:   event.AppendBuffer,
+		Source: b.id,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"space":  cap(b.records), // 实际分配的空间数量
+			"size":   len(b.records), // 目前已经有的元素数
+			"append": len(records),   // 本次新增多少数据点
+		},
+	}
+	brain.B.Emit(e)
+	return b
 }
 
-func (b SliceBuffer) ToSlice() []Record {
-	return []Record(b)
+func (b *SliceBuffer) ToSlice() []Record {
+	return b.records
 }
 
 type LinkedListBuffer struct {
+	id         uuid.UUID
 	recordList *list.List
 }
 
-func NewLinkedListBuffer() Buffer {
+func NewLinkedListBuffer(id uuid.UUID) Buffer {
 	return &LinkedListBuffer{
+		id:         id,
 		recordList: list.New(),
 	}
 }
@@ -69,6 +92,16 @@ func (b *LinkedListBuffer) Len() int {
 func (b *LinkedListBuffer) Write(records []Record) Buffer {
 	for _, record := range records {
 		b.recordList.PushBack(record)
+	}
+	e := &event.Event{
+		Type:   event.AppendBuffer,
+		Source: b.id,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"space":  b.recordList.Len(), // 实际分配的空间数量
+			"size":   b.recordList.Len(), // 目前已经有的元素数
+			"append": len(records),   // 本次新增多少数据点
+		},
 	}
 	return b
 }

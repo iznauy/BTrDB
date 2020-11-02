@@ -3,10 +3,10 @@ package qtree
 import (
 	"errors"
 	"fmt"
+	"github.com/iznauy/BTrDB/brain"
 	"github.com/op/go-logging"
 	"math"
 	"sort"
-	"time"
 )
 
 var log *logging.Logger
@@ -587,7 +587,7 @@ func (n *QTreeNode) ConvertToCore(newvals []Record) *QTreeNode {
  * This function is for inserting a large chunk of data. It is required
  * that the data is sorted, so we do that here
  */
-func (tr *QTree) InsertValues(buffer Buffer, span time.Duration) (e error) {
+func (tr *QTree) InsertValues(buffer Buffer) (e error) {
 	if tr.gen == nil {
 		return ErrBadInsert
 	}
@@ -611,7 +611,7 @@ func (tr *QTree) InsertValues(buffer Buffer, span time.Duration) (e error) {
 	if !tr.initialized {
 		tr.initialized = true
 		// 选择一个合适的 K V
-		K, V := tr.policy.DecideKAndV(buffer, span)
+		K, V := brain.B.GetKAndFForNewTimeSeries(tr.sb.Uuid())
 		tr.gen.New_SB.InitNewTS(K, V)
 		rt, err := tr.NewCoreNode(ROOTSTART, tr.GetRootPW())
 		if err != nil {

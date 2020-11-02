@@ -228,8 +228,6 @@ func NewWriteQTree(bs *bstore.BlockStore, id uuid.UUID) (*QTree, error) {
 			rv.root = rt
 		}
 		rv.initialized = true
-	} else {
-		rv.policy = &NaiveTreePolicy{}
 	}
 
 	return rv, nil

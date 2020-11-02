@@ -25,7 +25,7 @@ type openTree struct {
 	store  qtree.Buffer
 	id     uuid.UUID
 	sigEC  chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
-	new    bool // TODO: New Tree 相关逻辑判断转移
+	new    bool      // TODO: New Tree 相关逻辑判断转移
 	begin  time.Time
 	policy BufferPolicy
 }
@@ -55,8 +55,6 @@ func (f *forest) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
 		f.treeLocks[mk] = mtx
 		f.mu.Unlock()
 		mtx.Lock()
-		ot.policy = &NaiveBufferPolicy{}
-		ot.policy.InitPolicy(f.q, ot)
 		mtx.Unlock()
 		return ot, mtx
 	}
@@ -95,6 +93,7 @@ func newOpenTree(id uuid.UUID) *openTree {
 	return &openTree{
 		id:    id,
 		begin: time.Now(),
+		new:   true,
 	}
 }
 
@@ -167,13 +166,22 @@ func (t *openTree) commit(q *Quasar) {
 	if err != nil {
 		log.Panic(err)
 	}
-	if err := tr.InsertValues(t.store, time.Now().Sub(t.begin)); err != nil {
+	if err := tr.InsertValues(t.store); err != nil {
 		log.Error("BAD INSERT: ", err)
 	}
+	e := &event.Event{
+		Type:   event.CommitBuffer,
+		Source: t.id,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"new": t.new,
+			""
+		},
+	}
+	brain.B.Emit(e)
 	tr.Commit()
 	t.store = nil
-	t.policy.CommitNotice()
-	t.begin = time.Now()
+	t.new = false
 }
 
 // 插入数据点，如果没达到 buffer 限制，将数据插入到 buffer，否则将会提前刷新数据
@@ -189,8 +197,10 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		log.Panicf("This should not happen")
 		return
 	}
-	if !q.cfg.TransactionCoalesceEnable && !tr.policy.IsNewTree() { // 新树强制聚合 transactions
-		tr.store = qtree.SliceBuffer(r)
+	if !q.cfg.TransactionCoalesceEnable && !tr.new { // 新树强制聚合 transactions
+		tr.store = qtree.NewPreAllocatedSliceBuffer(id, uint64(len(r)))
+		tr.begin = time.Now()
+		tr.store.Write(r)
 		tr.commit(q)
 		mtx.Unlock()
 		return
@@ -203,7 +213,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 			Time:   time.Now(),
 			Params: map[string]interface{}{},
 		}
-
+		tr.begin = time.Now()
 		bufferType := brain.B.GetBufferType(id)
 		bufferMaxSize := brain.B.GetBufferMaxSize(id)
 		bufferCommitInterval := brain.B.GetCommitInterval(id)
@@ -213,11 +223,11 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		brain.B.Emit(e)
 		switch bufferType {
 		case brain.Slice:
-			tr.store = qtree.NewSliceBuffer()
+			tr.store = qtree.NewSliceBuffer(id)
 		case brain.PreAllocatedSlice:
-			tr.store = qtree.NewPreAllocatedSliceBuffer(bufferMaxSize)
+			tr.store = qtree.NewPreAllocatedSliceBuffer(id, bufferMaxSize)
 		case brain.LinkedList:
-			tr.store = qtree.NewLinkedListBuffer()
+			tr.store = qtree.NewLinkedListBuffer(id)
 		default:
 			log.Fatalf("unknown buffer type: %d", bufferType)
 		}

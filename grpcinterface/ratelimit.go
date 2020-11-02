@@ -1,7 +1,8 @@
 package grpcinterface
 
 import (
-	"github.com/iznauy/BTrDB/magic"
+	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/juju/ratelimit"
 	"github.com/yangwenmai/ratelimit/leakybucket"
 	"sync"
@@ -49,30 +50,43 @@ func newLimiter(readLimiter, writeLimiter int64, variable bool) *rateLimiter {
 
 	if variable {
 		r.begin = time.Now()
+		go r.emitEvent()
 		go r.vary()
 	}
 
 	return r
 }
 
-func (r *rateLimiter) vary() {
+func (r *rateLimiter) emitEvent() {
 	for {
-		time.Sleep(30 * time.Second)
+		time.Sleep(5 * time.Second)
+
 		readBytes := atomic.SwapInt64(&r.readBytes, 0)
 		writeBytes := atomic.SwapInt64(&r.writeBytes, 0)
 		span := time.Now().Sub(r.begin)
-		dataTrafficStatistics := &magic.DataTrafficStatistics{
-			ReadBytes:    readBytes,
-			WriteBytes:   writeBytes,
-			ReadLimiter:  r.readLimiter,
-			WriteLimiter: r.writeLimiter,
-			Span:         span,
+
+		e := &event.Event{
+			Type: event.LimitNotice,
+			Source: nil,
+			Time: time.Now(),
+			Params: map[string]interface{}{
+				"read_bytes": readBytes,
+				"write_bytes": writeBytes,
+				"read_limiter": r.readLimiter,
+				"write_limiter": r.writeBytes,
+				"span": span,
+			},
 		}
-		magic.Engine.UpdateDataTraffic(dataTrafficStatistics)
+		brain.B.Emit(e)
+	}
+}
+
+func (r *rateLimiter) vary() {
+	for {
+		time.Sleep(30 * time.Second)
 
 		// 访问决策模块获取更新的限速速率
-		r.readLimiter, r.writeLimiter = magic.Engine.GetReadWriteLimiter()
-
+		r.readLimiter, r.writeLimiter = brain.B.GetReadAndWriteLimiter()
 		// 变更限流速率
 		r.mu.Lock()
 		r.readBucket = ratelimit.NewBucketWithRate(float64(r.readLimiter), 5*r.readLimiter)
@@ -116,30 +130,30 @@ func (r *rateLimiter) Write(req GrpcWriteRequest) bool {
 	return true
 }
 
-func (req *InsertRequest) writeBytes() int64 {
-	return int64(len(req.Uuid) + len(req.Values)*24) // 24 = 8（指针大小）+ 8（时间戳大小）+ 8（数据大小）
+func (x *InsertRequest) writeBytes() int64 {
+	return int64(len(x.Uuid) + len(x.Values)*24) // 24 = 8（指针大小）+ 8（时间戳大小）+ 8（数据大小）
 }
 
-func (req *BatchInsertRequest) writeBytes() int64 {
+func (x *BatchInsertRequest) writeBytes() int64 {
 	bytes := int64(0)
-	for _, insertReq := range req.Inserts {
+	for _, insertReq := range x.Inserts {
 		bytes += insertReq.writeBytes()
 	}
-	return bytes + int64(len(req.Inserts)*8)
+	return bytes + int64(len(x.Inserts)*8)
 }
 
-func (req *DeleteRequest) writeBytes() int64 {
-	return int64(len(req.Uuid) + 16)
+func (x *DeleteRequest) writeBytes() int64 {
+	return int64(len(x.Uuid) + 16)
 }
 
-func (req *QueryRangeRequest) readBytes() int64 {
-	return int64(len(req.Uuid) + 24)
+func (x *QueryRangeRequest) readBytes() int64 {
+	return int64(len(x.Uuid) + 24)
 }
 
-func (req *QueryStatisticsRequest) readBytes() int64 {
-	return int64(len(req.Uuid) + 28)
+func (x *QueryStatisticsRequest) readBytes() int64 {
+	return int64(len(x.Uuid) + 28)
 }
 
-func (req *QueryNearestValueRequest) readBytes() int64 {
-	return int64(len(req.Uuid) + 17)
+func (x *QueryNearestValueRequest) readBytes() int64 {
+	return int64(len(x.Uuid) + 17)
 }

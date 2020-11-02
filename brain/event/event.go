@@ -13,6 +13,7 @@ var (
 	WriteBlock   EventType = 6
 	ReadBlock    EventType = 7
 	CacheNotice  EventType = 8
+	LimitNotice  EventType = 9
 )
 
 type Event struct {

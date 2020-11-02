@@ -24,6 +24,7 @@ func init() {
 	B.handlers[event.AppendBuffer] = []handler.EventHandler{handler.NewAppendBufferEventHandler()}
 	B.handlers[event.CommitBuffer] = []handler.EventHandler{handler.NewCommitBufferEventHandler()}
 	B.handlers[event.CacheNotice] = []handler.EventHandler{handler.NewCacheNoticeEventHandler()}
+	B.handlers[event.LimitNotice] = []handler.EventHandler{handler.NewRateLimiterEventHandler()}
 }
 
 type Brain struct {
@@ -65,6 +66,6 @@ func (b *Brain) GetCacheMaxSize() uint64 {
 	return 10000
 }
 
-func (b *Brain) GetKAndFForNewTimeSeries() (K uint16, F uint32) {
+func (b *Brain) GetKAndFForNewTimeSeries(id uuid.UUID) (K uint16, F uint32) {
 	return 6, 1024
 }

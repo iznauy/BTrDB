@@ -6,7 +6,6 @@ import (
 	"github.com/iznauy/BTrDB/btrdbd"
 	"github.com/iznauy/BTrDB/conf"
 	"github.com/iznauy/BTrDB/grpcinterface"
-	"github.com/iznauy/BTrDB/magic"
 	"os"
 	"os/signal"
 	"runtime"
@@ -62,7 +61,6 @@ func main() {
 	}
 	nCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nCPU)
-	magic.InitMagicEngine() // 初始化决策引擎
 	cfg := btrdbd.QuasarConfig{
 		DatablockCacheSize:        uint64(conf.Configuration.Cache.BlockCache),
 		TransactionCoalesceEnable: conf.Configuration.Coalescence.Enable,

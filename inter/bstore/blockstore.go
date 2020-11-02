@@ -5,7 +5,6 @@ import (
 	"github.com/iznauy/BTrDB/brain"
 	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
-	"github.com/iznauy/BTrDB/magic"
 	"os"
 	"strconv"
 	"sync"
@@ -136,29 +135,40 @@ func NewBlockStore(params map[string]string) (*BlockStore, error) {
 	}
 	bs.initCache(uint64(cachesz))
 
+	// 上报统计信息
+	go bs.emitEvent()
 	// 动态变化 cache
 	go bs.vary()
 
 	return &bs, nil
 }
 
+func (bs *BlockStore) emitEvent() {
+	for {
+		time.Sleep(1 * time.Second)
+
+		e := &event.Event{
+			Type: event.CacheNotice,
+			Source: nil,
+			Time: time.Now(),
+			Params: map[string]interface{}{
+				"cache_hit": bs.cachehit,
+				"cache_mit": bs.cachemiss,
+				"cache_size": bs.cachemax,
+				"leaf_count": uint64(0),
+				"non_leaf_count": bs.cachelen,
+			},
+		}
+		brain.B.Emit(e)
+	}
+}
+
 func (bs *BlockStore) vary() {
 	for {
 		// 定期激活
 		time.Sleep(10 * time.Second)
-
-		// 更新统计信息
-		cacheStatistics := &magic.CacheStatistics{
-			CacheHit:     bs.cachehit,
-			CacheMiss:    bs.cachemiss,
-			CacheSize:    bs.cachemax,
-			LeafCount:    0,
-			NonLeafCount: bs.cachelen,
-		}
-		magic.Engine.UpdateCache(cacheStatistics)
-
 		// 获取最新决策
-		cacheMaxSize := magic.Engine.GetCacheMaxSize()
+		cacheMaxSize := brain.B.GetCacheMaxSize()
 		bs.cachemaxmtx.Lock()
 		bs.cachemax = cacheMaxSize
 		bs.cachemaxmtx.Unlock()
