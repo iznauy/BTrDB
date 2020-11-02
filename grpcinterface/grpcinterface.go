@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/event"
 	btrdb2 "github.com/iznauy/BTrDB/btrdbd"
 	"github.com/iznauy/BTrDB/qtree"
 	"github.com/op/go-logging"
@@ -24,12 +26,6 @@ func init() {
 var batchInsertInProcess int32 = 0
 
 var limiter *rateLimiter
-
-var (
-	span  time.Duration
-	times int64
-	mu    sync.Mutex
-)
 
 var Success = &Status{
 	Code: 0,
@@ -126,6 +122,16 @@ func (g *GrpcInterface) Insert(ctx context.Context, req *InsertRequest) (*Insert
 			Status: ErrBadUUID,
 		}, nil
 	}
+	e := &event.Event{
+		Type:   event.WriteRequest,
+		Source: id,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"count":  int(len(records)),
+			"method": "Insert",
+		},
+	}
+	brain.B.Emit(e)
 	g.q.InsertValues(id, records)
 	return &InsertResponse{
 		Status: Success,
@@ -147,21 +153,21 @@ func (g *GrpcInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 			records = append(records, record)
 		}
 		recordsMap[string(req.Uuid)] = records
+
 	}
 	for uid, records := range recordsMap {
 		id := uuid.Parse(uid)
-		start := time.Now()
-		g.q.InsertValues(id, records)
-		localSpan := time.Now().Sub(start)
-		mu.Lock()
-		span += localSpan
-		times += 1
-		if times%1000 == 0 {
-			fmt.Println("最近1000次数据点插入，平均每次耗时：", float64(span.Milliseconds())/1000.0, "ms")
-			times = 0
-			span = 0
+		e := &event.Event{
+			Type:   event.WriteRequest,
+			Source: id,
+			Time:   time.Now(),
+			Params: map[string]interface{}{
+				"count":  int(len(records)),
+				"method": "BatchInsert",
+			},
 		}
-		mu.Unlock()
+		brain.B.Emit(e)
+		g.q.InsertValues(id, records)
 	}
 	w.Done()
 }
@@ -283,6 +289,16 @@ func (g *GrpcInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) 
 			Value: records[i].Val,
 		}
 	}
+	e := &event.Event{
+		Type:   event.ReadRequest,
+		Source: id,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"count":  int(len(records)),
+			"method": "QueryRange",
+		},
+	}
+	brain.B.Emit(e)
 	return &QueryRangeResponse{
 		Status:  Success,
 		Version: version,
@@ -367,6 +383,16 @@ func (g *GrpcInterface) QueryStatistics(ctx context.Context, req *QueryStatistic
 		}
 		statistics = append(statistics, statistic)
 	}
+	e := &event.Event{
+		Type:   event.ReadRequest,
+		Source: id,
+		Time:   time.Now(),
+		Params: map[string]interface{}{
+			"count":  int(len(records)),
+			"method": "QueryStatistics",
+		},
+	}
+	brain.B.Emit(e)
 	return &QueryStatisticsResponse{
 		Status:     Success,
 		Version:    version,

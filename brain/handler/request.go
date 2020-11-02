@@ -1,6 +1,8 @@
 package handler
 
-import "github.com/iznauy/BTrDB/brain/event"
+import (
+	"github.com/iznauy/BTrDB/brain/event"
+)
 
 type ReadRequestEventHandler struct {}
 
@@ -9,6 +11,7 @@ func NewReadRequestEventHandler() EventHandler {
 }
 
 func (ReadRequestEventHandler) Process(e *event.Event) bool {
+
 	return true
 }
 

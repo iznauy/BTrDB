@@ -1,74 +1,57 @@
 package stats
 
-import "sync"
+import (
+	"github.com/akhenakh/statgo"
+	"sync"
+	"time"
+)
 
 type OsStats struct {
-	Memory *MemoryStats
-	Cpu    *CpuStats
-	Disk   *DiskStats
-	Net    *NetStats
-}
+	stats *statgo.Stat
 
-type MemoryStats struct {
-	mu sync.RWMutex
-}
+	CPU   *statgo.CPUStats
+	cpuMu sync.RWMutex
 
-type CpuStats struct {
-	mu sync.RWMutex
-}
+	DiskIO []*statgo.DiskIOStats
+	diskMu sync.RWMutex
 
-type DiskStats struct {
-	mu sync.RWMutex
-}
+	NetIO []*statgo.NetIOStats
+	netMu sync.RWMutex
 
-type NetStats struct {
-	mu sync.RWMutex
+	Mem   *statgo.MemStats
+	memMu sync.RWMutex
 }
 
 func NewOsStats() *OsStats {
-	return &OsStats{
-		Memory: NewMemoryStats(),
-		Cpu:    NewCpuStats(),
-		Disk:   NewDiskStats(),
-		Net:    NewNetStats(),
+	os := &OsStats{
+		stats: statgo.NewStat(),
 	}
+	os.CPU = os.stats.CPUStats()
+	os.DiskIO = os.stats.DiskIOStats()
+	os.NetIO = os.stats.NetIOStats()
+	os.Mem = os.stats.MemStats()
+	go os.vary()
+	return os
 }
 
-func NewMemoryStats() *MemoryStats {
-	return &MemoryStats{}
-}
+func (os *OsStats) vary() {
+	for {
+		time.Sleep(30)
 
-func NewCpuStats() *CpuStats {
-	return &CpuStats{}
-}
+		os.cpuMu.Lock()
+		os.CPU = os.stats.CPUStats()
+		os.cpuMu.Unlock()
 
-func NewDiskStats() *DiskStats {
-	return &DiskStats{}
-}
+		os.diskMu.Lock()
+		os.DiskIO = os.stats.DiskIOStats()
+		os.diskMu.Unlock()
 
-func NewNetStats() *NetStats {
-	return &NetStats{}
-}
+		os.netMu.Lock()
+		os.NetIO = os.stats.NetIOStats()
+		os.netMu.Unlock()
 
-func (os *OsStats) gatherOsStats() {
-	os.Memory.gatherMemoryStats()
-	os.Cpu.gatherCpuStats()
-	os.Net.gatherNetStats()
-	os.Disk.gatherDiskStats()
-}
-
-func (mem *MemoryStats) gatherMemoryStats() {
-
-}
-
-func (cpu *CpuStats) gatherCpuStats() {
-
-}
-
-func (disk *DiskStats) gatherDiskStats() {
-
-}
-
-func (net *NetStats) gatherNetStats() {
-
+		os.memMu.Lock()
+		os.Mem = os.stats.MemStats()
+		os.memMu.Unlock()
+	}
 }

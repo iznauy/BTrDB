@@ -148,14 +148,14 @@ func (bs *BlockStore) emitEvent() {
 		time.Sleep(1 * time.Second)
 
 		e := &event.Event{
-			Type: event.CacheNotice,
+			Type:   event.CacheNotice,
 			Source: nil,
-			Time: time.Now(),
+			Time:   time.Now(),
 			Params: map[string]interface{}{
-				"cache_hit": bs.cachehit,
-				"cache_mit": bs.cachemiss,
-				"cache_size": bs.cachemax,
-				"leaf_count": uint64(0),
+				"cache_hit":      bs.cachehit,
+				"cache_miss":     bs.cachemiss,
+				"cache_size":     bs.cachemax,
+				"leaf_count":     uint64(0),
 				"non_leaf_count": bs.cachelen,
 			},
 		}
@@ -320,9 +320,9 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 
 	// emit read block event
 	e := &event.Event{
-		Type: event.ReadBlock,
+		Type:   event.ReadBlock,
 		Source: uuid,
-		Time: time.Now(),
+		Time:   time.Now(),
 		Params: map[string]interface{}{},
 	}
 	defer brain.B.Emit(e)
@@ -345,7 +345,7 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 		rv.PointWidth = impl_Pointwidth
 		rv.StartTime = impl_StartTime
 		bs.cachePut(addr, rv)
-		e.Params["core_count"] = int(1)
+		e.Params["core_count"] = uint64(1)
 		return rv
 	case Vector:
 		rv := &Vectorblock{}
@@ -358,7 +358,7 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 		rv.PointWidth = impl_Pointwidth
 		rv.StartTime = impl_StartTime
 		bs.cachePut(addr, rv)
-		e.Params["vector_count"] = int(1)
+		e.Params["vector_count"] = uint64(1)
 		return rv
 	}
 	lg.Panic("Strange datablock type")

@@ -9,5 +9,6 @@ func NewRateLimiterEventHandler() EventHandler {
 }
 
 func (RateLimiterEventHandler) Process(e *event.Event) bool {
+
 	return true
 }

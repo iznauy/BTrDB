@@ -25,9 +25,8 @@ type openTree struct {
 	store  qtree.Buffer
 	id     uuid.UUID
 	sigEC  chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
-	new    bool      // TODO: New Tree 相关逻辑判断转移
+	new    bool
 	begin  time.Time
-	policy BufferPolicy
 }
 
 type forest struct {
@@ -174,8 +173,7 @@ func (t *openTree) commit(q *Quasar) {
 		Source: t.id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
-			"new": t.new,
-			""
+			"span": time.Now().Sub(t.begin).Milliseconds(),
 		},
 	}
 	brain.B.Emit(e)

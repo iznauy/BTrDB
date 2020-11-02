@@ -41,3 +41,9 @@ func GetBoolFromMap(m map[string]interface{}, k string) (bool, bool) {
 	}
 	return false, false
 }
+
+func UUIDToMapKey(id []byte) [16]byte {
+	rv := [16]byte{}
+	copy(rv[:], id)
+	return rv
+}

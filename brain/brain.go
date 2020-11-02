@@ -11,9 +11,9 @@ var B *Brain
 
 func init() {
 	B = &Brain{
-		systemStats:      stats.NewSystemStats(),
-		osStats:          stats.NewOsStats(),
-		applicationStats: stats.NewApplicationStats(),
+		SystemStats:      stats.NewSystemStats(),
+		OsStats:          stats.NewOsStats(),
+		ApplicationStats: stats.NewApplicationStats(),
 		handlers:         map[event.EventType][]handler.EventHandler{},
 	}
 	B.handlers[event.ReadRequest] = []handler.EventHandler{handler.NewReadRequestEventHandler()}
@@ -28,9 +28,9 @@ func init() {
 }
 
 type Brain struct {
-	systemStats      *stats.SystemStats
-	osStats          *stats.OsStats
-	applicationStats *stats.ApplicationStats
+	SystemStats      *stats.SystemStats
+	OsStats          *stats.OsStats
+	ApplicationStats *stats.ApplicationStats
 
 	handlers map[event.EventType][]handler.EventHandler
 }
