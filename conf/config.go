@@ -54,7 +54,7 @@ func LoadConfig() {
 	found := false
 	err := gcfg.ReadFileInto(&Configuration, "./btrdb.conf")
 	if err != nil {
-		fmt.Printf("Could not load configuration file './btrdb.conf':\n%v\n", err)
+		fmt.Printf("Could not load configuration file './btrdb.conf': %v\n", err)
 	} else {
 		found = true
 	}

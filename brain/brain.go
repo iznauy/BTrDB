@@ -3,10 +3,29 @@ package brain
 import (
 	"github.com/iznauy/BTrDB/brain/stats"
 	"github.com/iznauy/BTrDB/brain/types"
+	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
+	"sync"
+	"time"
 )
 
 var B *Brain
+
+var log *logging.Logger
+
+var (
+	appendTimes int64
+	appendSpan  time.Duration
+	appendMu    sync.RWMutex
+
+	commitTimes int64
+	commitSpan  time.Duration
+	commitMu    sync.RWMutex
+
+	createTimes int64
+	createSpan  time.Duration
+	createMu    sync.RWMutex
+)
 
 func init() {
 	B = &Brain{
@@ -14,6 +33,8 @@ func init() {
 		ApplicationStats: stats.NewApplicationStats(),
 		handlers:         map[types.EventType][]types.EventHandler{},
 	}
+	log = logging.MustGetLogger("log")
+	go BroadcastStatistics()
 }
 
 type Brain struct {
@@ -23,6 +44,36 @@ type Brain struct {
 	handlers map[types.EventType][]types.EventHandler
 }
 
+func BroadcastStatistics() {
+	for {
+		time.Sleep(5 * time.Second) // 每隔五秒输出一次统计信息
+
+		appendMu.RLock()
+		if appendTimes > 0 {
+			log.Infof("append 事件共触发了%v次，总耗时%vms，平均耗时%vms.", appendTimes, appendSpan.Milliseconds(), appendSpan.Milliseconds() * 1.0 / appendTimes)
+		} else {
+			log.Info("append 事件尚未触发")
+		}
+		appendMu.RUnlock()
+
+		createMu.RLock()
+		if createTimes > 0 {
+			log.Infof("create 事件共触发了%v次，总耗时%vms，平均耗时%vms", createTimes, createSpan.Milliseconds(), createSpan.Milliseconds() * 1.0 / createTimes)
+		} else {
+			log.Info("create 事件尚未触发")
+		}
+		createMu.RUnlock()
+
+		commitMu.RLock()
+		if commitTimes > 0 {
+			log.Infof("commit 事件共触发了%v次，总耗时%vms，平均耗时%vms", commitTimes, commitSpan.Milliseconds(), commitSpan.Milliseconds() * 1.0 / commitTimes)
+		} else {
+			log.Info("commit 事件尚未触发")
+		}
+		commitMu.RUnlock()
+	}
+}
+
 func (b *Brain) Emit(e *types.Event) {
 	if e == nil {
 		return
@@ -30,11 +81,36 @@ func (b *Brain) Emit(e *types.Event) {
 	if e.Type != types.AppendBuffer && e.Type != types.CommitBuffer && e.Type != types.CreateBuffer {
 		return
 	}
-	for _, h := range b.handlers[e.Type] {
-		if !h.Process(e) {
-			break
+	defer func() func() {
+		begin := time.Now()
+		return func() {
+			localSpan := time.Now().Sub(begin)
+			if e.Type == types.AppendBuffer {
+				appendMu.Lock()
+				appendSpan += localSpan
+				appendTimes += 1
+				appendMu.Unlock()
+			}
+			if e.Type == types.CommitBuffer {
+				commitMu.Lock()
+				commitSpan += localSpan
+				commitTimes += 1
+				commitMu.Unlock()
+			}
+			if e.Type == types.CreateBuffer {
+				createMu.Lock()
+				createSpan += localSpan
+				createTimes += 1
+				createMu.Unlock()
+			}
 		}
-	}
+	} ()()
+
+	//for _, h := range b.handlers[e.Type] {
+	//	if !h.Process(e) {
+	//		break
+	//	}
+	//}
 }
 
 func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
@@ -58,9 +134,15 @@ func (b *Brain) GetCacheMaxSize() uint64 {
 }
 
 func (b *Brain) GetKAndFForNewTimeSeries(id uuid.UUID) (K uint16, F uint32) {
-	return 6, 1024
+	return 64, 1024
 }
 
 func (b *Brain) RegisterEventHandler(tp types.EventType, handler types.EventHandler) {
-
+	handlerMap := b.handlers
+	handlers, ok := handlerMap[tp]
+	if !ok {
+		handlers = make([]types.EventHandler, 0, 1)
+	}
+	handlers = append(handlers, handler)
+	handlerMap[tp] = handlers
 }

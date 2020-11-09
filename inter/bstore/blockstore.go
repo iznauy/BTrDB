@@ -255,6 +255,8 @@ func (gen *Generation) Commit() (map[uint64]uint64, error) {
 		Uuid:    gen.New_SB.uuid.String(),
 		Version: gen.New_SB.gen,
 		Root:    gen.New_SB.root,
+		K:       gen.New_SB.K(),
+		V:       gen.New_SB.V(),
 	}
 	if err := gen.blockstore.meta.InsertMeta(meta); err != nil {
 		lg.Panic(err)
