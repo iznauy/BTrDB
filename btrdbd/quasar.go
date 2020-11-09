@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/cespare/xxhash"
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 	"sync"
 	"time"
 
@@ -168,8 +168,8 @@ func (t *openTree) commit(q *Quasar) {
 	if err := tr.InsertValues(t.store); err != nil {
 		log.Error("BAD INSERT: ", err)
 	}
-	e := &event.Event{
-		Type:   event.CommitBuffer,
+	e := &types.Event{
+		Type:   types.CommitBuffer,
 		Source: t.id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
@@ -205,8 +205,8 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 	}
 	if tr.store == nil {
 		//Empty store
-		e := &event.Event{
-			Type:   event.CreateBuffer,
+		e := &types.Event{
+			Type:   types.CreateBuffer,
 			Source: id,
 			Time:   time.Now(),
 			Params: map[string]interface{}{},
@@ -220,11 +220,11 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		e.Params["commit_interval"] = bufferCommitInterval
 		brain.B.Emit(e)
 		switch bufferType {
-		case brain.Slice:
+		case types.Slice:
 			tr.store = qtree.NewSliceBuffer(id)
-		case brain.PreAllocatedSlice:
+		case types.PreAllocatedSlice:
 			tr.store = qtree.NewPreAllocatedSliceBuffer(id, bufferMaxSize)
-		case brain.LinkedList:
+		case types.LinkedList:
 			tr.store = qtree.NewLinkedListBuffer(id)
 		default:
 			log.Fatalf("unknown buffer type: %d", bufferType)

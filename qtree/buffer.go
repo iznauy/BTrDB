@@ -3,7 +3,7 @@ package qtree
 import (
 	"container/list"
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 	"github.com/pborman/uuid"
 	"time"
 )
@@ -44,8 +44,8 @@ func (b *SliceBuffer) Len() int {
 
 func (b *SliceBuffer) Write(records []Record) Buffer {
 	b.records = append(b.records, records...)
-	e := &event.Event{
-		Type:   event.AppendBuffer,
+	e := &types.Event{
+		Type:   types.AppendBuffer,
 		Source: b.id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
@@ -93,8 +93,8 @@ func (b *LinkedListBuffer) Write(records []Record) Buffer {
 	for _, record := range records {
 		b.recordList.PushBack(record)
 	}
-	e := &event.Event{
-		Type:   event.AppendBuffer,
+	e := &types.Event{
+		Type:   types.AppendBuffer,
 		Source: b.id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{

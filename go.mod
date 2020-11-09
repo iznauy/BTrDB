@@ -3,7 +3,6 @@ module github.com/iznauy/BTrDB
 go 1.12
 
 require (
-	github.com/akhenakh/statgo v0.0.0-20171021021904-3ae2cda264c5 // indirect
 	github.com/cespare/xxhash v1.1.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1 // indirect

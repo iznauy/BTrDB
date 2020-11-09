@@ -1,14 +1,16 @@
 package handler
 
-import "github.com/iznauy/BTrDB/brain/event"
+import (
+	"github.com/iznauy/BTrDB/brain/types"
+)
 
 type RateLimiterEventHandler struct {}
 
-func NewRateLimiterEventHandler() EventHandler {
+func NewRateLimiterEventHandler() types.EventHandler {
 	return &RateLimiterEventHandler{}
 }
 
-func (RateLimiterEventHandler) Process(e *event.Event) bool {
+func (RateLimiterEventHandler) Process(e *types.Event) bool {
 
 	return true
 }

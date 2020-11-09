@@ -2,19 +2,19 @@ package handler
 
 import (
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/iznauy/BTrDB/brain/stats"
 	"github.com/iznauy/BTrDB/brain/tool"
+	"github.com/iznauy/BTrDB/brain/types"
 )
 
 type CreateBufferEventHandler struct{}
 
-func NewCreateBufferEventHandler() EventHandler {
+func NewCreateBufferEventHandler() types.EventHandler {
 	return &CreateBufferEventHandler{}
 }
 
-func (CreateBufferEventHandler) Process(e *event.Event) bool {
-	bufferType := e.Params["type"].(brain.BufferType)
+func (CreateBufferEventHandler) Process(e *types.Event) bool {
+	bufferType := e.Params["type"].(types.BufferType)
 	bufferMaxSize, _ := tool.GetUint64FromMap(e.Params, "max_size")
 	bufferCommitInterval, _ := tool.GetUint64FromMap(e.Params, "commit_interval")
 
@@ -41,11 +41,11 @@ func (CreateBufferEventHandler) Process(e *event.Event) bool {
 
 type AppendBufferEventHandler struct{}
 
-func NewAppendBufferEventHandler() EventHandler {
+func NewAppendBufferEventHandler() types.EventHandler {
 	return &AppendBufferEventHandler{};
 }
 
-func (AppendBufferEventHandler) Process(e *event.Event) bool {
+func (AppendBufferEventHandler) Process(e *types.Event) bool {
 	allocatedSpace, _ := tool.GetUint64FromMap(e.Params, "space")
 	usedSpace, _ := tool.GetUint64FromMap(e.Params, "size")
 	appendCount, _ := tool.GetUint64FromMap(e.Params, "append")
@@ -66,11 +66,11 @@ func (AppendBufferEventHandler) Process(e *event.Event) bool {
 
 type CommitBufferEventHandler struct{}
 
-func NewCommitBufferEventHandler() EventHandler {
+func NewCommitBufferEventHandler() types.EventHandler {
 	return &CommitBufferEventHandler{}
 }
 
-func (CommitBufferEventHandler) Process(e *event.Event) bool {
+func (CommitBufferEventHandler) Process(e *types.Event) bool {
 	systemStats := brain.B.SystemStats
 	systemStats.BufferMutex.Lock()
 	defer systemStats.BufferMutex.Unlock()

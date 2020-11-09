@@ -1,7 +1,7 @@
 package stats
 
 import (
-	"github.com/iznauy/BTrDB/brain"
+	"github.com/iznauy/BTrDB/brain/types"
 	"sync"
 	"time"
 )
@@ -30,7 +30,7 @@ type TsBufferStats struct {
 	AllocatedSpace uint64
 	UsedSpace      uint64
 	CommitInterval uint64
-	Type           brain.BufferType
+	Type           types.BufferType
 
 	LatestCommitted time.Time
 }

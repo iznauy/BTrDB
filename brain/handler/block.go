@@ -2,17 +2,17 @@ package handler
 
 import (
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/iznauy/BTrDB/brain/tool"
+	"github.com/iznauy/BTrDB/brain/types"
 )
 
 type ReadBlockEventHandler struct {}
 
-func NewReadBlockEventHandler() EventHandler {
+func NewReadBlockEventHandler() types.EventHandler {
 	return &ReadBlockEventHandler{}
 }
 
-func (ReadBlockEventHandler) Process(e *event.Event) bool {
+func (ReadBlockEventHandler) Process(e *types.Event) bool {
 	now := e.Time
 	count := uint64(0)
 	if n, ok := tool.GetUint64FromMap(e.Params, "core_count"); ok {
@@ -34,11 +34,11 @@ func (ReadBlockEventHandler) Process(e *event.Event) bool {
 
 type WriteBlockEventHandler struct {}
 
-func NewWriteBlockEventHandler() EventHandler {
+func NewWriteBlockEventHandler() types.EventHandler {
 	return &WriteBlockEventHandler{}
 }
 
-func (WriteBlockEventHandler) Process(e *event.Event) bool {
+func (WriteBlockEventHandler) Process(e *types.Event) bool {
 	now := e.Time
 	count := uint64(0)
 	if n, ok := tool.GetUint64FromMap(e.Params, "core_count"); ok {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 	btrdb2 "github.com/iznauy/BTrDB/btrdbd"
 	"github.com/iznauy/BTrDB/qtree"
 	"github.com/op/go-logging"
@@ -122,8 +122,8 @@ func (g *GrpcInterface) Insert(ctx context.Context, req *InsertRequest) (*Insert
 			Status: ErrBadUUID,
 		}, nil
 	}
-	e := &event.Event{
-		Type:   event.WriteRequest,
+	e := &types.Event{
+		Type:   types.WriteRequest,
 		Source: id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
@@ -157,8 +157,8 @@ func (g *GrpcInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 	}
 	for uid, records := range recordsMap {
 		id := uuid.Parse(uid)
-		e := &event.Event{
-			Type:   event.WriteRequest,
+		e := &types.Event{
+			Type:   types.WriteRequest,
 			Source: id,
 			Time:   time.Now(),
 			Params: map[string]interface{}{
@@ -289,8 +289,8 @@ func (g *GrpcInterface) QueryRange(ctx context.Context, req *QueryRangeRequest) 
 			Value: records[i].Val,
 		}
 	}
-	e := &event.Event{
-		Type:   event.ReadRequest,
+	e := &types.Event{
+		Type:   types.ReadRequest,
 		Source: id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
@@ -383,8 +383,8 @@ func (g *GrpcInterface) QueryStatistics(ctx context.Context, req *QueryStatistic
 		}
 		statistics = append(statistics, statistic)
 	}
-	e := &event.Event{
-		Type:   event.ReadRequest,
+	e := &types.Event{
+		Type:   types.ReadRequest,
 		Source: id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{

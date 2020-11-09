@@ -3,7 +3,7 @@ package bstore
 import (
 	"errors"
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 	"github.com/iznauy/BTrDB/inter/metaprovider"
 	"os"
 	"strconv"
@@ -147,8 +147,8 @@ func (bs *BlockStore) emitEvent() {
 	for {
 		time.Sleep(1 * time.Second)
 
-		e := &event.Event{
-			Type:   event.CacheNotice,
+		e := &types.Event{
+			Type:   types.CacheNotice,
 			Source: nil,
 			Time:   time.Now(),
 			Params: map[string]interface{}{
@@ -319,8 +319,8 @@ func (bs *BlockStore) ReadDatablock(uuid uuid.UUID, addr uint64, impl_Generation
 	}
 
 	// emit read block event
-	e := &event.Event{
-		Type:   event.ReadBlock,
+	e := &types.Event{
+		Type:   types.ReadBlock,
 		Source: uuid,
 		Time:   time.Now(),
 		Params: map[string]interface{}{},

@@ -2,17 +2,17 @@ package handler
 
 import (
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
 	"github.com/iznauy/BTrDB/brain/tool"
+	"github.com/iznauy/BTrDB/brain/types"
 )
 
 type CacheNoticeEventHandler struct{}
 
-func NewCacheNoticeEventHandler() EventHandler {
+func NewCacheNoticeEventHandler() types.EventHandler {
 	return &CacheNoticeEventHandler{}
 }
 
-func (CacheNoticeEventHandler) Process(e *event.Event) bool {
+func (CacheNoticeEventHandler) Process(e *types.Event) bool {
 	cacheHit, _ := tool.GetUint64FromMap(e.Params, "cache_hit")
 	cacheMiss, _ := tool.GetUint64FromMap(e.Params, "cache_miss")
 	cacheSize, _ := tool.GetUint64FromMap(e.Params, "cache_size")

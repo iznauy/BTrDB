@@ -1,4 +1,4 @@
-package brain
+package types
 
 type BufferType int
 

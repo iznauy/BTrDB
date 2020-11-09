@@ -1,27 +1,27 @@
 package handler
 
 import (
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 )
 
 type ReadRequestEventHandler struct {}
 
-func NewReadRequestEventHandler() EventHandler {
+func NewReadRequestEventHandler() types.EventHandler {
 	return &ReadRequestEventHandler{}
 }
 
-func (ReadRequestEventHandler) Process(e *event.Event) bool {
+func (ReadRequestEventHandler) Process(e *types.Event) bool {
 
 	return true
 }
 
 type WriteRequestEventHandler struct {}
 
-func NewWriteRequestEventHandler() EventHandler {
+func NewWriteRequestEventHandler() types.EventHandler {
 	return &WriteRequestEventHandler{}
 }
 
-func (WriteRequestEventHandler) Process(e *event.Event) bool {
+func (WriteRequestEventHandler) Process(e *types.Event) bool {
 	return true
 }
 

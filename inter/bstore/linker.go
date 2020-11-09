@@ -2,7 +2,7 @@ package bstore
 
 import (
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 	"log"
 	"sort"
 	"sync"
@@ -108,8 +108,8 @@ func LinkAndStore(uuid []byte, bs *BlockStore, bp bprovider.StorageProvider, vbl
 	}
 
 	// emit write block event
-	e := &event.Event{
-		Type:   event.WriteBlock,
+	e := &types.Event{
+		Type:   types.WriteBlock,
 		Source: uuid,
 		Time:   time.Now(),
 		Params: map[string]interface{}{

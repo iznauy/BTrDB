@@ -2,7 +2,7 @@ package grpcinterface
 
 import (
 	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/event"
+	"github.com/iznauy/BTrDB/brain/types"
 	"github.com/juju/ratelimit"
 	"github.com/yangwenmai/ratelimit/leakybucket"
 	"sync"
@@ -65,10 +65,10 @@ func (r *rateLimiter) emitEvent() {
 		writeBytes := atomic.SwapInt64(&r.writeBytes, 0)
 		span := time.Now().Sub(r.begin)
 
-		e := &event.Event{
-			Type: event.LimitNotice,
+		e := &types.Event{
+			Type:   types.LimitNotice,
 			Source: nil,
-			Time: time.Now(),
+			Time:   time.Now(),
 			Params: map[string]interface{}{
 				"read_bytes": readBytes,
 				"write_bytes": writeBytes,
