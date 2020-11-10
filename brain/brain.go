@@ -5,6 +5,7 @@ import (
 	"github.com/iznauy/BTrDB/brain/types"
 	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -50,7 +51,7 @@ func BroadcastStatistics() {
 
 		appendMu.RLock()
 		if appendTimes > 0 {
-			log.Infof("append 事件共触发了%v次，总耗时%vms，平均耗时%vms.", appendTimes, appendSpan.Milliseconds(), appendSpan.Milliseconds() * 1.0 / appendTimes)
+			log.Infof("append 事件共触发了%v次，总耗时%vms，平均耗时%v微秒.", appendTimes, appendSpan.Milliseconds(), appendSpan.Microseconds() * 1.0 / appendTimes)
 		} else {
 			log.Info("append 事件尚未触发")
 		}
@@ -58,7 +59,7 @@ func BroadcastStatistics() {
 
 		createMu.RLock()
 		if createTimes > 0 {
-			log.Infof("create 事件共触发了%v次，总耗时%vms，平均耗时%vms", createTimes, createSpan.Milliseconds(), createSpan.Milliseconds() * 1.0 / createTimes)
+			log.Infof("create 事件共触发了%v次，总耗时%vms，平均耗时%v微秒", createTimes, createSpan.Milliseconds(), createSpan.Microseconds() * 1.0 / createTimes)
 		} else {
 			log.Info("create 事件尚未触发")
 		}
@@ -66,11 +67,16 @@ func BroadcastStatistics() {
 
 		commitMu.RLock()
 		if commitTimes > 0 {
-			log.Infof("commit 事件共触发了%v次，总耗时%vms，平均耗时%vms", commitTimes, commitSpan.Milliseconds(), commitSpan.Milliseconds() * 1.0 / commitTimes)
+			log.Infof("commit 事件共触发了%v次，总耗时%vms，平均耗时%v微秒", commitTimes, commitSpan.Milliseconds(), commitSpan.Microseconds() * 1.0 / commitTimes)
 		} else {
 			log.Info("commit 事件尚未触发")
 		}
 		commitMu.RUnlock()
+
+		B.SystemStats.BufferMutex.RLock()
+		buffer := B.SystemStats.Buffer
+		log.Infof("buffer 统计信息：总使用的空间 = %v，总分配的空间 = %v, 内存中驻留的时间序列 = %v", buffer.TotalUsedSpace, buffer.TotalAllocatedSpace, buffer.TimeSeriesInMemory)
+		B.SystemStats.BufferMutex.RUnlock()
 	}
 }
 
@@ -105,12 +111,11 @@ func (b *Brain) Emit(e *types.Event) {
 			}
 		}
 	} ()()
-
-	//for _, h := range b.handlers[e.Type] {
-	//	if !h.Process(e) {
-	//		break
-	//	}
-	//}
+	for _, h := range b.handlers[e.Type] {
+		if !h.Process(e) {
+			break
+		}
+	}
 }
 
 func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
@@ -118,11 +123,11 @@ func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
 }
 
 func (b *Brain) GetCommitInterval(id uuid.UUID) uint64 {
-	return 10000
+	return 10000 + uint64(rand.Int() % 10000)
 }
 
 func (b *Brain) GetBufferMaxSize(id uuid.UUID) uint64 {
-	return 10000
+	return 10000 + uint64(rand.Int() % 10000)
 }
 
 func (b *Brain) GetBufferType(id uuid.UUID) types.BufferType {
@@ -130,7 +135,7 @@ func (b *Brain) GetBufferType(id uuid.UUID) types.BufferType {
 }
 
 func (b *Brain) GetCacheMaxSize() uint64 {
-	return 10000
+	return 125000
 }
 
 func (b *Brain) GetKAndFForNewTimeSeries(id uuid.UUID) (K uint16, F uint32) {

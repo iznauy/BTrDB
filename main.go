@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/iznauy/BTrDB/brain/handler"
 	"github.com/iznauy/BTrDB/btrdbd"
 	"github.com/iznauy/BTrDB/conf"
 	"github.com/iznauy/BTrDB/grpcinterface"
@@ -59,6 +60,7 @@ func main() {
 		fmt.Printf("Done\n")
 		os.Exit(0)
 	}
+	handler.RegisterEventHandlers()
 	nCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nCPU)
 	cfg := btrdbd.QuasarConfig{
