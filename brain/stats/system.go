@@ -18,8 +18,9 @@ type SystemStats struct {
 }
 
 type BufferStats struct {
-	TotalAllocatedSpace uint64
-	TotalUsedSpace      uint64
+	TotalAnnouncedSpace uint64 // 总共许诺出的内存块
+	TotalAllocatedSpace uint64 // 已经分配出去的内存块
+	TotalUsedSpace      uint64 // 已经使用的内存块
 	TimeSeriesInMemory  uint64
 
 	TsBufferMap map[[16]byte]*TsBufferStats

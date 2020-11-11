@@ -21,7 +21,7 @@ type SliceBuffer struct {
 }
 
 func NewSliceBuffer(id uuid.UUID) Buffer {
-	return NewPreAllocatedSliceBuffer(id, 1)
+	return NewPreAllocatedSliceBuffer(id, 0)
 }
 
 func NewPreAllocatedSliceBuffer(id uuid.UUID, bufferSize uint64) Buffer {

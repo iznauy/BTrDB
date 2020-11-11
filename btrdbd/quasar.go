@@ -218,7 +218,6 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		e.Params["type"] = bufferType
 		e.Params["max_size"] = bufferMaxSize
 		e.Params["commit_interval"] = bufferCommitInterval
-		brain.B.Emit(e)
 		switch bufferType {
 		case types.Slice:
 			tr.store = qtree.NewSliceBuffer(id)
@@ -229,6 +228,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		default:
 			log.Fatalf("unknown buffer type: %d", bufferType)
 		}
+		brain.B.Emit(e)
 		tr.sigEC = make(chan bool, 1)
 		//Also spawn the coalesce timeout goroutine
 		go func(abort chan bool) {

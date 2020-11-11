@@ -24,7 +24,10 @@ func (CreateBufferEventHandler) Process(e *types.Event) bool {
 
 	buffer := systemStats.Buffer
 	buffer.TimeSeriesInMemory += 1
-	buffer.TotalAllocatedSpace += bufferMaxSize
+	buffer.TotalAnnouncedSpace += bufferMaxSize
+	if bufferType == types.PreAllocatedSlice { // 只有是预分配切片才会在刚开始的时候实际分配内存出去
+		buffer.TotalAllocatedSpace += bufferMaxSize
+	}
 
 	tsBufferStats, ok := buffer.TsBufferMap[tool.UUIDToMapKey(e.Source)]
 	if !ok {
@@ -33,6 +36,9 @@ func (CreateBufferEventHandler) Process(e *types.Event) bool {
 	}
 	tsBufferStats.Type = bufferType
 	tsBufferStats.AllocatedSpace = 0
+	if bufferType == types.PreAllocatedSlice {
+		tsBufferStats.AllocatedSpace = bufferMaxSize
+	}
 	tsBufferStats.CommitInterval = bufferCommitInterval
 	tsBufferStats.UsedSpace = 0
 	tsBufferStats.MaxSize = bufferMaxSize
@@ -48,7 +54,7 @@ func NewAppendBufferEventHandler() types.EventHandler {
 func (AppendBufferEventHandler) Process(e *types.Event) bool {
 	allocatedSpace, _ := tool.GetUint64FromMap(e.Params, "space")
 	usedSpace, _ := tool.GetUint64FromMap(e.Params, "size")
-	appendCount, _ := tool.GetUint64FromMap(e.Params, "append")
+	// appendCount, _ := tool.GetUint64FromMap(e.Params, "append")
 
 	systemStats := brain.B.SystemStats
 	systemStats.BufferMutex.Lock()
@@ -56,10 +62,12 @@ func (AppendBufferEventHandler) Process(e *types.Event) bool {
 
 	buffer := systemStats.Buffer
 	tsBufferStats := buffer.TsBufferMap[tool.UUIDToMapKey(e.Source)]
+	// 使用差值更新总体的统计信息
 	buffer.TotalAllocatedSpace += allocatedSpace - tsBufferStats.AllocatedSpace
-	buffer.TotalUsedSpace += appendCount
+	buffer.TotalUsedSpace += usedSpace - tsBufferStats.UsedSpace
 
-	tsBufferStats.AllocatedSpace = appendCount
+	// 更新当前时间序列的数据统计信息
+	tsBufferStats.AllocatedSpace = allocatedSpace
 	tsBufferStats.UsedSpace = usedSpace
 	return true
 }
@@ -80,11 +88,13 @@ func (CommitBufferEventHandler) Process(e *types.Event) bool {
 	buffer.TimeSeriesInMemory -= 1
 	buffer.TotalAllocatedSpace -= tsBufferStats.AllocatedSpace
 	buffer.TotalUsedSpace -= tsBufferStats.UsedSpace
+	buffer.TotalAnnouncedSpace -= tsBufferStats.MaxSize
 
 	tsBufferStats.UsedSpace = 0
 	tsBufferStats.AllocatedSpace = 0
 	tsBufferStats.CommitInterval = 0
 	tsBufferStats.MaxSize = 0
 	tsBufferStats.LatestCommitted = e.Time
+	tsBufferStats.Type = types.None
 	return true
 }
