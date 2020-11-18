@@ -2,10 +2,7 @@ package qtree
 
 import (
 	"container/list"
-	"github.com/iznauy/BTrDB/brain"
-	"github.com/iznauy/BTrDB/brain/types"
 	"github.com/pborman/uuid"
-	"time"
 )
 
 type Buffer interface {
@@ -44,17 +41,17 @@ func (b *SliceBuffer) Len() int {
 
 func (b *SliceBuffer) Write(records []Record) Buffer {
 	b.records = append(b.records, records...)
-	e := &types.Event{
-		Type:   types.AppendBuffer,
-		Source: b.id,
-		Time:   time.Now(),
-		Params: map[string]interface{}{
-			"space":  uint64(cap(b.records)), // 实际分配的空间数量
-			"size":   uint64(len(b.records)), // 目前已经有的元素数
-			"append": uint64(len(records)),   // 本次新增多少数据点
-		},
-	}
-	brain.B.Emit(e)
+	//e := &types.Event{
+	//	Type:   types.AppendBuffer,
+	//	Source: b.id,
+	//	Time:   time.Now(),
+	//	Params: map[string]interface{}{
+	//		"space":  uint64(cap(b.records)), // 实际分配的空间数量
+	//		"size":   uint64(len(b.records)), // 目前已经有的元素数
+	//		"append": uint64(len(records)),   // 本次新增多少数据点
+	//	},
+	//}
+	//brain.B.Emit(e)
 	return b
 }
 
@@ -93,17 +90,17 @@ func (b *LinkedListBuffer) Write(records []Record) Buffer {
 	for _, record := range records {
 		b.recordList.PushBack(record)
 	}
-	e := &types.Event{
-		Type:   types.AppendBuffer,
-		Source: b.id,
-		Time:   time.Now(),
-		Params: map[string]interface{}{
-			"space":  b.recordList.Len(), // 实际分配的空间数量
-			"size":   b.recordList.Len(), // 目前已经有的元素数
-			"append": len(records),       // 本次新增多少数据点
-		},
-	}
-	brain.B.Emit(e)
+	//e := &types.Event{
+	//	Type:   types.AppendBuffer,
+	//	Source: b.id,
+	//	Time:   time.Now(),
+	//	Params: map[string]interface{}{
+	//		"space":  b.recordList.Len(), // 实际分配的空间数量
+	//		"size":   b.recordList.Len(), // 目前已经有的元素数
+	//		"append": len(records),       // 本次新增多少数据点
+	//	},
+	//}
+	//brain.B.Emit(e)
 	return b
 }
 

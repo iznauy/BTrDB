@@ -7,6 +7,10 @@ import (
 )
 
 type SystemStats struct {
+	TsMap map[[16]byte]*Ts
+	TsLockMap map[[16]byte]*sync.Mutex
+	TsStatsMu sync.RWMutex
+
 	Buffer      *BufferStats
 	BufferMutex sync.RWMutex
 
@@ -16,6 +20,7 @@ type SystemStats struct {
 	Storage      *StorageStats
 	StorageMutex sync.RWMutex
 }
+
 
 type BufferStats struct {
 	TotalAnnouncedSpace uint64 // 总共许诺出的内存块

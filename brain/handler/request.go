@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/iznauy/BTrDB/brain/tool"
 	"github.com/iznauy/BTrDB/brain/types"
 )
 
@@ -22,6 +23,11 @@ func NewWriteRequestEventHandler() types.EventHandler {
 }
 
 func (WriteRequestEventHandler) Process(e *types.Event) bool {
+	id := e.Source
+	t := e.Time
+	span, _ := tool.GetInt64FromMap(e.Params, "span")
+	count, _ := tool.GetInt64FromMap(e.Params, "count")
+
 	return true
 }
 

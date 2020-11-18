@@ -127,12 +127,15 @@ func (g *GrpcInterface) Insert(ctx context.Context, req *InsertRequest) (*Insert
 		Source: id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
-			"count":  int(len(records)),
+			"count":  int64(len(records)),
 			"method": "Insert",
 		},
 	}
-	brain.B.Emit(e)
+	begin := time.Now()
 	g.q.InsertValues(id, records)
+	span := time.Now().Sub(begin)
+	e.Params["span"] = span.Microseconds()
+	brain.B.Emit(e)
 	return &InsertResponse{
 		Status: Success,
 	}, nil
@@ -162,12 +165,15 @@ func (g *GrpcInterface) batchInsert(insertReqs []*InsertRequest, w *sync.WaitGro
 			Source: id,
 			Time:   time.Now(),
 			Params: map[string]interface{}{
-				"count":  int(len(records)),
+				"count":  int64(len(records)),
 				"method": "BatchInsert",
 			},
 		}
-		brain.B.Emit(e)
+		begin := time.Now()
 		g.q.InsertValues(id, records)
+		span := time.Now().Sub(begin)
+		e.Params["span"] = span.Microseconds()
+		brain.B.Emit(e)
 	}
 	w.Done()
 }
