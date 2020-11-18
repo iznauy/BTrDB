@@ -177,6 +177,7 @@ func (t *openTree) commit(q *Quasar) {
 		Params: map[string]interface{}{
 			"span":            time.Now().Sub(t.begin).Milliseconds(),
 			"commit_interval": t.commitInterval,
+			"full": t.bufferMaxSize == uint64(t.store.Len()),
 		},
 	}
 	brain.B.Emit(e)
