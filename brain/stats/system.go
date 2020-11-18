@@ -56,6 +56,9 @@ type BufferStats struct {
 	TotalUsedSpace      uint64 // 已经使用的内存块
 	TimeSeriesInMemory  uint64
 
+	// 为2020年11月18日13:07:24实验新增的统计信息
+	TotalCommitInterval uint64 // 所有时间序列的总提交时间，便于计算平均提交时间
+
 	TsBufferMap map[[16]byte]*TsBufferStats
 }
 

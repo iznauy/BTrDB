@@ -22,11 +22,13 @@ func init() {
 
 type openTree struct {
 	// 缓冲区
-	store  qtree.Buffer
-	id     uuid.UUID
-	sigEC  chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
-	new    bool
-	begin  time.Time
+	store          qtree.Buffer
+	id             uuid.UUID
+	sigEC          chan bool // 提前提交的时候往这个里面发个消息，让当次的定期任务不再执行
+	new            bool
+	begin          time.Time
+	commitInterval uint64
+	bufferMaxSize  uint64
 }
 
 type forest struct {
@@ -173,13 +175,16 @@ func (t *openTree) commit(q *Quasar) {
 		Source: t.id,
 		Time:   time.Now(),
 		Params: map[string]interface{}{
-			"span": time.Now().Sub(t.begin).Milliseconds(),
+			"span":            time.Now().Sub(t.begin).Milliseconds(),
+			"commit_interval": t.commitInterval,
 		},
 	}
 	brain.B.Emit(e)
 	tr.Commit()
 	t.store = nil
 	t.new = false
+	t.commitInterval = 0
+	t.bufferMaxSize = 0
 }
 
 // 插入数据点，如果没达到 buffer 限制，将数据插入到 buffer，否则将会提前刷新数据
@@ -213,8 +218,9 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		}
 		tr.begin = time.Now()
 		bufferType := brain.B.GetBufferType(id)
-		bufferMaxSize := brain.B.GetBufferMaxSize(id)
-		bufferCommitInterval := brain.B.GetCommitInterval(id)
+		bufferMaxSize, bufferCommitInterval := brain.B.GetBufferMaxSizeAndCommitInterval(id)
+		tr.bufferMaxSize = bufferMaxSize
+		tr.commitInterval = bufferCommitInterval
 		e.Params["type"] = bufferType
 		e.Params["max_size"] = bufferMaxSize
 		e.Params["commit_interval"] = bufferCommitInterval
@@ -247,7 +253,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 		}(tr.sigEC)
 	}
 	tr.store.Write(r)
-	if uint64(tr.store.Len()) >= brain.B.GetBufferMaxSize(id) {
+	if uint64(tr.store.Len()) >= tr.bufferMaxSize {
 		tr.sigEC <- true
 		log.Debug("Coalesce early trip %v", id.String())
 		tr.commit(q)

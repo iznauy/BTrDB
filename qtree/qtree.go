@@ -611,7 +611,7 @@ func (tr *QTree) InsertValues(buffer Buffer) (e error) {
 	if !tr.initialized {
 		tr.initialized = true
 		// 选择一个合适的 K V
-		K, V := brain.B.GetKAndFForNewTimeSeries(tr.sb.Uuid())
+		K, V := brain.B.GetKAndVForNewTimeSeries(tr.sb.Uuid())
 		tr.gen.New_SB.InitNewTS(K, V)
 		rt, err := tr.NewCoreNode(ROOTSTART, tr.GetRootPW())
 		if err != nil {

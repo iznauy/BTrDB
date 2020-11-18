@@ -1,12 +1,18 @@
 package brain
 
 import (
+	"fmt"
+	"github.com/iznauy/BTrDB/brain/conf"
 	"github.com/iznauy/BTrDB/brain/stats"
+	"github.com/iznauy/BTrDB/brain/tool"
 	"github.com/iznauy/BTrDB/brain/types"
 	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
+	"math"
 	"math/rand"
+	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -35,12 +41,13 @@ func init() {
 		handlers:         map[types.EventType][]types.EventHandler{},
 	}
 	log = logging.MustGetLogger("log")
-//	go BroadcastStatistics()
+	//	go BroadcastStatistics()
 }
 
 type Brain struct {
 	SystemStats      *stats.SystemStats
 	ApplicationStats *stats.ApplicationStats
+	DecisionTimes    int64
 
 	handlers map[types.EventType][]types.EventHandler
 }
@@ -51,7 +58,7 @@ func BroadcastStatistics() {
 
 		appendMu.RLock()
 		if appendTimes > 0 {
-			log.Infof("append 事件共触发了%v次，总耗时%vms，平均耗时%v微秒.", appendTimes, appendSpan.Milliseconds(), appendSpan.Microseconds() * 1.0 / appendTimes)
+			log.Infof("append 事件共触发了%v次，总耗时%vms，平均耗时%v微秒.", appendTimes, appendSpan.Milliseconds(), appendSpan.Microseconds()*1.0/appendTimes)
 		} else {
 			log.Info("append 事件尚未触发")
 		}
@@ -59,7 +66,7 @@ func BroadcastStatistics() {
 
 		createMu.RLock()
 		if createTimes > 0 {
-			log.Infof("create 事件共触发了%v次，总耗时%vms，平均耗时%v微秒", createTimes, createSpan.Milliseconds(), createSpan.Microseconds() * 1.0 / createTimes)
+			log.Infof("create 事件共触发了%v次，总耗时%vms，平均耗时%v微秒", createTimes, createSpan.Milliseconds(), createSpan.Microseconds()*1.0/createTimes)
 		} else {
 			log.Info("create 事件尚未触发")
 		}
@@ -67,7 +74,7 @@ func BroadcastStatistics() {
 
 		commitMu.RLock()
 		if commitTimes > 0 {
-			log.Infof("commit 事件共触发了%v次，总耗时%vms，平均耗时%v微秒", commitTimes, commitSpan.Milliseconds(), commitSpan.Microseconds() * 1.0 / commitTimes)
+			log.Infof("commit 事件共触发了%v次，总耗时%vms，平均耗时%v微秒", commitTimes, commitSpan.Milliseconds(), commitSpan.Microseconds()*1.0/commitTimes)
 		} else {
 			log.Info("commit 事件尚未触发")
 		}
@@ -84,33 +91,33 @@ func (b *Brain) Emit(e *types.Event) {
 	if e == nil {
 		return
 	}
-	if e.Type != types.AppendBuffer && e.Type != types.CommitBuffer && e.Type != types.CreateBuffer {
+	if e.Type != types.WriteRequest && e.Type != types.CommitBuffer && e.Type != types.CreateBuffer {
 		return
 	}
-	defer func() func() {
-		begin := time.Now()
-		return func() {
-			localSpan := time.Now().Sub(begin)
-			if e.Type == types.AppendBuffer {
-				appendMu.Lock()
-				appendSpan += localSpan
-				appendTimes += 1
-				appendMu.Unlock()
-			}
-			if e.Type == types.CommitBuffer {
-				commitMu.Lock()
-				commitSpan += localSpan
-				commitTimes += 1
-				commitMu.Unlock()
-			}
-			if e.Type == types.CreateBuffer {
-				createMu.Lock()
-				createSpan += localSpan
-				createTimes += 1
-				createMu.Unlock()
-			}
-		}
-	} ()()
+	//defer func() func() {
+	//	begin := time.Now()
+	//	return func() {
+	//		localSpan := time.Now().Sub(begin)
+	//		if e.Type == types.AppendBuffer {
+	//			appendMu.Lock()
+	//			appendSpan += localSpan
+	//			appendTimes += 1
+	//			appendMu.Unlock()
+	//		}
+	//		if e.Type == types.CommitBuffer {
+	//			commitMu.Lock()
+	//			commitSpan += localSpan
+	//			commitTimes += 1
+	//			commitMu.Unlock()
+	//		}
+	//		if e.Type == types.CreateBuffer {
+	//			createMu.Lock()
+	//			createSpan += localSpan
+	//			createTimes += 1
+	//			createMu.Unlock()
+	//		}
+	//	}
+	//} ()()
 	for _, h := range b.handlers[e.Type] {
 		if !h.Process(e) {
 			break
@@ -122,12 +129,46 @@ func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
 	return 1000000000, 1000000000
 }
 
-func (b *Brain) GetCommitInterval(id uuid.UUID) uint64 {
-	return 10000 + uint64(rand.Int() % 10000)
-}
-
-func (b *Brain) GetBufferMaxSize(id uuid.UUID) uint64 {
-	return 10000 + uint64(rand.Int() % 10000)
+func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
+	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
+	if ts.LastCommitTime == nil { // 新时间序列只能采用平均法进行第一次决策！
+		ts.BufferSize = 5000 + uint64(rand.Int()%10000)
+		ts.CommitInterval = ts.BufferSize
+		return ts.BufferSize, ts.CommitInterval
+	}
+	// 非第一次决策，一定概率采用随机策略
+	if b.makeRandomDecision() {
+		b.SystemStats.BufferMutex.RLock()
+		buffer := b.SystemStats.Buffer
+		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
+		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
+		return ts.BufferSize, ts.CommitInterval
+	}
+	// 不采用随机策略的话，先是从各个时间序列中随机选出50个，然后找出最相近的4个时间序列，随后附加上当前时间序列，最后再根据其当前性能进行排序
+	greatTs := b.findGreatestTsForBufferSize(ts)
+	tsNode := greatTs.StatsList.Tail
+	for {
+		if tsNode == nil {
+			fmt.Printf("That should not happened")
+			break
+		}
+		if tsNode.Data.P == nil {
+			tsNode = tsNode.Prev
+			continue
+		}
+		action := tsNode.Data.A
+		if action.Action != types.BufferSize {
+			continue
+		}
+		ts.BufferSize = action.BufferSize
+		ts.CommitInterval = action.CommitInterval
+		return ts.BufferSize, ts.CommitInterval
+	}
+	b.SystemStats.BufferMutex.RLock()
+	buffer := b.SystemStats.Buffer
+	ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
+	ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
+	return ts.BufferSize, ts.CommitInterval
 }
 
 func (b *Brain) GetBufferType(id uuid.UUID) types.BufferType {
@@ -138,8 +179,32 @@ func (b *Brain) GetCacheMaxSize() uint64 {
 	return 125000
 }
 
-func (b *Brain) GetKAndFForNewTimeSeries(id uuid.UUID) (K uint16, F uint32) {
-	return 64, 1024
+func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
+	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
+	if b.makeRandomDecision() {
+		K, V = randomGetKAndV()
+		ts.K = K
+		ts.V = V
+		return ts.K, ts.V
+	}
+	greatTs := b.findGreatestTsForBufferSize(ts)
+	if greatTs == nil {
+		K, V = randomGetKAndV()
+		ts.K = K
+		ts.V = V
+		return ts.K, ts.V
+	}
+	ts.K = greatTs.K
+	ts.V = greatTs.V
+	return ts.K, ts.V
+}
+
+func randomGetKAndV() (K uint16, V uint32) {
+	KSet := []uint16{8, 16, 32, 64, 128, 256}
+	VSet := []uint32{256, 512, 1024, 2048, 4096}
+	K = KSet[rand.Int()%len(KSet)]
+	V = VSet[rand.Int()%len(VSet)]
+	return
 }
 
 func (b *Brain) RegisterEventHandler(tp types.EventType, handler types.EventHandler) {
@@ -150,4 +215,100 @@ func (b *Brain) RegisterEventHandler(tp types.EventType, handler types.EventHand
 	}
 	handlers = append(handlers, handler)
 	handlerMap[tp] = handlers
+}
+
+func (b *Brain) makeRandomDecision() bool {
+	prob := conf.Alpha * math.Pow(conf.Beta, float64(atomic.LoadInt64(&b.DecisionTimes)))
+	atomic.AddInt64(&b.DecisionTimes, 1)
+	return rand.Float64() < prob
+}
+
+func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
+	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
+	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
+	distances := make([]*Distance, 0, len(randomSampleTss))
+	tsStats := ts.StatsList.Tail.Data
+	for _, sampleTs := range randomSampleTss {
+		randomSampleTsMap[sampleTs.ID] = sampleTs
+		minDistance := math.MaxFloat64
+		sampleTs.StatsList.Foreach(func(stats *stats.TsStats) {
+			if stats.P == nil {
+				return
+			}
+			distance := stats.S.Distance(tsStats.S)
+			if minDistance > distance {
+				minDistance = distance
+			}
+		})
+		distances = append(distances, &Distance{
+			distance: minDistance,
+			id:       sampleTs.ID,
+		})
+	}
+	sort.Slice(distances, func(i, j int) bool {
+		return distances[i].distance < distances[j].distance
+	})
+	if len(distances) > conf.DecisionSetCount {
+		distances = distances[:conf.DecisionSetCount]
+	}
+	if len(distances) == 0 {
+		return nil
+	}
+	greatestTs := randomSampleTsMap[distances[0].id]
+	greatestP := greatestTs.StatsList.Tail.Prev.Data.P.P
+	for _, distance := range distances {
+		id := distance.id
+		currentTs := randomSampleTsMap[id]
+		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
+		if currentP > greatestP {
+			greatestTs = currentTs
+		}
+	}
+	return greatestTs
+}
+
+func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
+	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
+	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
+	distances := make([]*Distance, 0, len(randomSampleTss))
+	tsStats := ts.StatsList.Tail.Prev.Data // 最近的一次 buffer 生命周期中时间序列的统计数据
+	for _, sampleTs := range randomSampleTss {
+		randomSampleTsMap[sampleTs.ID] = sampleTs
+		minDistance := math.MaxFloat64
+		sampleTs.StatsList.Foreach(func(stats *stats.TsStats) {
+			if stats.P == nil {
+				return
+			}
+			distance := stats.S.Distance(tsStats.S)
+			if minDistance > distance {
+				minDistance = distance
+			}
+		})
+		distances = append(distances, &Distance{
+			distance: minDistance,
+			id:       sampleTs.ID,
+		})
+	}
+	sort.Slice(distances, func(i, j int) bool {
+		return distances[i].distance < distances[j].distance
+	})
+	if len(distances) > conf.DecisionSetCount {
+		distances = distances[:conf.DecisionSetCount]
+	}
+	greatestTs := ts
+	greatestP := ts.StatsList.Tail.Prev.Data.P.P
+	for _, distance := range distances {
+		id := distance.id
+		currentTs := randomSampleTsMap[id]
+		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
+		if currentP > greatestP {
+			greatestTs = currentTs
+		}
+	}
+	return greatestTs
+}
+
+type Distance struct {
+	distance float64
+	id       [16]byte
 }

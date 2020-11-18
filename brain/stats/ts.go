@@ -9,15 +9,19 @@ import (
 )
 
 type Ts struct {
-	StatsList *TsStatsList
-	ID [16]byte
+	StatsList      *TsStatsList
+	ID             [16]byte
+	K              uint16
+	V              uint32
+	CommitInterval uint64
+	BufferSize     uint64
 	LastCommitTime *time.Time
 }
 
 func NewTs(id [16]byte) *Ts {
 	return &Ts{
-		StatsList: NewTsStatsList(conf.StateSequenceMaxLength),
-		ID: id,
+		StatsList:      NewTsStatsList(conf.StateSequenceMaxLength),
+		ID:             id,
 		LastCommitTime: nil,
 	}
 }
@@ -28,6 +32,7 @@ type TsStats struct {
 	A       *Action
 	Mutex   sync.RWMutex
 	EndTime *time.Time
+	Closed  bool
 }
 
 func NewTsStats() *TsStats {
@@ -35,10 +40,11 @@ func NewTsStats() *TsStats {
 		S: &State{
 			Records: make([]*Record, 0, 1),
 		},
+		Closed: false,
 	}
 }
 
-func (stats *TsStats) AddRecord (record *Record) {
+func (stats *TsStats) AddRecord(record *Record) {
 	if stats.EndTime != nil { // 封口之后还插入数据，说明这个事件因为提交延迟导致晚于 commit 事件的提交
 		stats.Mutex.Lock()
 	}
@@ -49,7 +55,6 @@ func (stats *TsStats) AddRecord (record *Record) {
 		stats.Mutex.Unlock()
 	}
 }
-
 
 type TsStatsNode struct {
 	Data *TsStats
@@ -118,8 +123,8 @@ func (s *State) Distance(anotherS *State) float64 {
 	SizeStdDelta := anotherS.SizeStd - s.SizeStd
 	DeltaTimeMeanDelta := anotherS.DeltaTimeMean - s.DeltaTimeMean
 	DeltaTimeStdDelta := anotherS.DeltaTimeStd - s.DeltaTimeStd
-	return SizeMeanDelta * SizeMeanDelta + SizeStdDelta * SizeStdDelta +
-		DeltaTimeMeanDelta * DeltaTimeMeanDelta + DeltaTimeStdDelta * DeltaTimeStdDelta
+	return SizeMeanDelta*SizeMeanDelta + SizeStdDelta*SizeStdDelta +
+		DeltaTimeMeanDelta*DeltaTimeMeanDelta + DeltaTimeStdDelta*DeltaTimeStdDelta
 }
 
 type Record struct {
@@ -133,12 +138,10 @@ type Performance struct {
 }
 
 type Action struct {
-	Action     types.ActionType
-	K          uint16
-	V          uint32
-	BufferSize uint64
+	Action         types.ActionType
+	BufferSize     uint64
+	CommitInterval uint64
 }
-
 
 func (stats *TsStats) CalculateStatisticsAndPerformance() {
 	if len(stats.S.Records) == 0 {
@@ -148,13 +151,13 @@ func (stats *TsStats) CalculateStatisticsAndPerformance() {
 	TimeSum := 0.0
 	LastTime := int64(0)
 	SizeSlice := make([]float64, 0, len(stats.S.Records))
-	DeltaTimeSlice := make([]float64, 0, len(stats.S.Records) - 1)
+	DeltaTimeSlice := make([]float64, 0, len(stats.S.Records)-1)
 	for i, record := range stats.S.Records {
 		SizeSlice = append(SizeSlice, float64(record.Size))
 		SizeSum += float64(record.Size)
 		TimeSum += float64(record.ConsumingTime)
 		if i > 0 {
-			DeltaTimeSlice = append(DeltaTimeSlice, float64((record.Time.UnixNano() - LastTime) / 1e3))
+			DeltaTimeSlice = append(DeltaTimeSlice, float64((record.Time.UnixNano()-LastTime)/1e3))
 		}
 		LastTime = record.Time.UnixNano()
 	}

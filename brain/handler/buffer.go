@@ -5,6 +5,7 @@ import (
 	"github.com/iznauy/BTrDB/brain/stats"
 	"github.com/iznauy/BTrDB/brain/tool"
 	"github.com/iznauy/BTrDB/brain/types"
+	"time"
 )
 
 type CreateBufferEventHandler struct{}
@@ -19,26 +20,22 @@ func (CreateBufferEventHandler) Process(e *types.Event) bool {
 	bufferCommitInterval, _ := tool.GetUint64FromMap(e.Params, "commit_interval")
 
 	systemStats := brain.B.SystemStats
-	systemStats.BufferMutex.Lock()
-	defer systemStats.BufferMutex.Unlock()
 
+	systemStats.BufferMutex.Lock()
 	buffer := systemStats.Buffer
 	buffer.TimeSeriesInMemory += 1
 	buffer.TotalAnnouncedSpace += bufferMaxSize
-	if bufferType == types.PreAllocatedSlice { // 只有是预分配切片才会在刚开始的时候实际分配内存出去
-		buffer.TotalAllocatedSpace += bufferMaxSize
-	}
+	buffer.TotalCommitInterval += bufferCommitInterval
 
 	tsBufferStats, ok := buffer.TsBufferMap[tool.UUIDToMapKey(e.Source)]
 	if !ok {
 		tsBufferStats = stats.NewTsBufferStats()
 		buffer.TsBufferMap[tool.UUIDToMapKey(e.Source)] = tsBufferStats
 	}
+	systemStats.BufferMutex.Unlock()
+
 	tsBufferStats.Type = bufferType
 	tsBufferStats.AllocatedSpace = 0
-	if bufferType == types.PreAllocatedSlice {
-		tsBufferStats.AllocatedSpace = bufferMaxSize
-	}
 	tsBufferStats.CommitInterval = bufferCommitInterval
 	tsBufferStats.UsedSpace = 0
 	tsBufferStats.MaxSize = bufferMaxSize
@@ -48,7 +45,7 @@ func (CreateBufferEventHandler) Process(e *types.Event) bool {
 type AppendBufferEventHandler struct{}
 
 func NewAppendBufferEventHandler() types.EventHandler {
-	return &AppendBufferEventHandler{};
+	return &AppendBufferEventHandler{}
 }
 
 func (AppendBufferEventHandler) Process(e *types.Event) bool {
@@ -81,14 +78,12 @@ func NewCommitBufferEventHandler() types.EventHandler {
 func (CommitBufferEventHandler) Process(e *types.Event) bool {
 	systemStats := brain.B.SystemStats
 	systemStats.BufferMutex.Lock()
-	defer systemStats.BufferMutex.Unlock()
 
 	buffer := systemStats.Buffer
 	tsBufferStats := buffer.TsBufferMap[tool.UUIDToMapKey(e.Source)]
 	buffer.TimeSeriesInMemory -= 1
-	buffer.TotalAllocatedSpace -= tsBufferStats.AllocatedSpace
-	buffer.TotalUsedSpace -= tsBufferStats.UsedSpace
 	buffer.TotalAnnouncedSpace -= tsBufferStats.MaxSize
+	systemStats.BufferMutex.Unlock()
 
 	tsBufferStats.UsedSpace = 0
 	tsBufferStats.AllocatedSpace = 0
@@ -96,5 +91,19 @@ func (CommitBufferEventHandler) Process(e *types.Event) bool {
 	tsBufferStats.MaxSize = 0
 	tsBufferStats.LatestCommitted = e.Time
 	tsBufferStats.Type = types.None
+
+	ts := systemStats.GetTs(tool.UUIDToMapKey(e.Source))
+	tsStats := ts.StatsList.Tail.Data
+	tsStats.Mutex.Lock()
+	endTime := time.Now()
+	tsStats.EndTime = &endTime
+	tsStats.CalculateStatisticsAndPerformance()
+	tsStats.A = &stats.Action{
+		Action:         types.BufferSize,
+		BufferSize:     ts.BufferSize,
+		CommitInterval: ts.CommitInterval,
+	}
+	ts.StatsList.Append(stats.NewTsStats())
+	tsStats.Mutex.Unlock()
 	return true
 }
