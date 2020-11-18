@@ -1,12 +1,25 @@
 package stats
 
 import (
+	"github.com/iznauy/BTrDB/brain/conf"
 	"github.com/iznauy/BTrDB/brain/types"
+	"math"
 	"sync"
 	"time"
 )
 
 type Ts struct {
+	StatsList *TsStatsList
+	ID [16]byte
+	LastCommitTime *time.Time
+}
+
+func NewTs(id [16]byte) *Ts {
+	return &Ts{
+		StatsList: NewTsStatsList(conf.StateSequenceMaxLength),
+		ID: id,
+		LastCommitTime: nil,
+	}
 }
 
 type TsStats struct {
@@ -100,6 +113,15 @@ type State struct {
 	DeltaTimeStd  float64
 }
 
+func (s *State) Distance(anotherS *State) float64 {
+	SizeMeanDelta := anotherS.SizeMean - s.SizeMean
+	SizeStdDelta := anotherS.SizeStd - s.SizeStd
+	DeltaTimeMeanDelta := anotherS.DeltaTimeMean - s.DeltaTimeMean
+	DeltaTimeStdDelta := anotherS.DeltaTimeStd - s.DeltaTimeStd
+	return SizeMeanDelta * SizeMeanDelta + SizeStdDelta * SizeStdDelta +
+		DeltaTimeMeanDelta * DeltaTimeMeanDelta + DeltaTimeStdDelta * DeltaTimeStdDelta
+}
+
 type Record struct {
 	Time          time.Time // 进行插入的时间
 	Size          int64
@@ -122,13 +144,48 @@ func (stats *TsStats) CalculateStatisticsAndPerformance() {
 	if len(stats.S.Records) == 0 {
 		return
 	}
-	SizeSum := int64(0)
+	SizeSum := 0.0
+	TimeSum := 0.0
 	LastTime := int64(0)
+	SizeSlice := make([]float64, 0, len(stats.S.Records))
+	DeltaTimeSlice := make([]float64, 0, len(stats.S.Records) - 1)
 	for i, record := range stats.S.Records {
-		SizeSum += record.Size
+		SizeSlice = append(SizeSlice, float64(record.Size))
+		SizeSum += float64(record.Size)
+		TimeSum += float64(record.ConsumingTime)
 		if i > 0 {
-
+			DeltaTimeSlice = append(DeltaTimeSlice, float64((record.Time.UnixNano() - LastTime) / 1e3))
 		}
-		LastTime = record.Time.UnixNano() / 1e3
+		LastTime = record.Time.UnixNano()
 	}
+	SizeMean, SizeStd := calculateMeanAndStd(SizeSlice)
+	DeltaTimeMean, DeltaTimeStd := calculateMeanAndStd(DeltaTimeSlice)
+	stats.S.SizeMean = SizeMean
+	stats.S.SizeStd = SizeStd
+	stats.S.DeltaTimeMean = DeltaTimeMean
+	stats.S.DeltaTimeStd = DeltaTimeStd
+	if stats.P == nil {
+		stats.P = &Performance{
+			P: 0.0,
+		}
+	}
+	stats.P.P = SizeSum / TimeSum
+}
+
+func calculateMeanAndStd(numbers []float64) (float64, float64) {
+	if len(numbers) == 0 {
+		return 0, 0
+	}
+	sum := 0.0
+	for _, num := range numbers {
+		sum += num
+	}
+	mean := sum / float64(len(numbers))
+	vars := 0.0
+	for _, num := range numbers {
+		vars += (num - mean) * (num - mean)
+	}
+	vars /= float64(len(numbers))
+	std := math.Sqrt(vars)
+	return mean, std
 }

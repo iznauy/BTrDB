@@ -2,13 +2,14 @@ package stats
 
 import (
 	"github.com/iznauy/BTrDB/brain/types"
+	"math/rand"
 	"sync"
 	"time"
 )
 
 type SystemStats struct {
 	TsMap map[[16]byte]*Ts
-	TsLockMap map[[16]byte]*sync.Mutex
+	TsList []*Ts
 	TsStatsMu sync.RWMutex
 
 	Buffer      *BufferStats
@@ -21,6 +22,33 @@ type SystemStats struct {
 	StorageMutex sync.RWMutex
 }
 
+func (system *SystemStats) GetTs(id [16]byte) *Ts {
+	system.TsStatsMu.RLock()
+	if ts, ok := system.TsMap[id]; ok {
+		return ts
+	}
+	system.TsStatsMu.RUnlock()
+	system.TsStatsMu.Lock()
+	if ts, ok := system.TsMap[id]; ok {
+		system.TsStatsMu.Unlock()
+		return ts
+	}
+	ts := NewTs(id)
+	system.TsMap[id] = ts
+	system.TsList = append(system.TsList, ts)
+	system.TsStatsMu.Unlock()
+	return ts
+}
+
+func (system *SystemStats) RandomSampleTs(count int) []*Ts {
+	system.TsStatsMu.RLock()
+	defer system.TsStatsMu.RUnlock()
+	if len(system.TsList) <= count {
+		return system.TsList[:]
+	}
+	begin := rand.Int() % (len(system.TsList) - count)
+	return system.TsList[begin:begin+count]
+}
 
 type BufferStats struct {
 	TotalAnnouncedSpace uint64 // 总共许诺出的内存块

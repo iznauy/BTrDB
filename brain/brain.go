@@ -35,7 +35,7 @@ func init() {
 		handlers:         map[types.EventType][]types.EventHandler{},
 	}
 	log = logging.MustGetLogger("log")
-	go BroadcastStatistics()
+//	go BroadcastStatistics()
 }
 
 type Brain struct {
