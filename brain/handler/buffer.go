@@ -39,6 +39,12 @@ func (CreateBufferEventHandler) Process(e *types.Event) bool {
 	tsBufferStats.CommitInterval = bufferCommitInterval
 	tsBufferStats.UsedSpace = 0
 	tsBufferStats.MaxSize = bufferMaxSize
+
+	ts := systemStats.GetTs(tool.UUIDToMapKey(e.Source))
+	if ts.StatsList.Size == 0 {
+		ts.StatsList.Append(stats.NewTsStats())
+	}
+
 	return true
 }
 
@@ -107,7 +113,7 @@ func (CommitBufferEventHandler) Process(e *types.Event) bool {
 	if !full {
 		tsStats.Closed = true // 假如是因为超时被强制提交，则直接封口，后续请求无法写入该 tsStats
 	}
-	ts.StatsList.Append(stats.NewTsStats())
 	tsStats.Mutex.Unlock()
+	ts.StatsList.Append(stats.NewTsStats())
 	return true
 }

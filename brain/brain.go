@@ -118,11 +118,14 @@ func (b *Brain) Emit(e *types.Event) {
 	//		}
 	//	}
 	//} ()()
+	eventNumber := rand.Int()
+	fmt.Printf("event: %v, id = %d 开始处理\n", e, eventNumber)
 	for _, h := range b.handlers[e.Type] {
 		if !h.Process(e) {
 			break
 		}
 	}
+	fmt.Printf("event: %v, id = %d 处理完毕\n", e, eventNumber)
 }
 
 func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
@@ -146,6 +149,13 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 	}
 	// 不采用随机策略的话，先是从各个时间序列中随机选出50个，然后找出最相近的4个时间序列，随后附加上当前时间序列，最后再根据其当前性能进行排序
 	greatTs := b.findGreatestTsForBufferSize(ts)
+	if greatTs == nil { // 有可能当前所有的时间序列都没有先验知识，那我们还是只能采用随机策略
+		b.SystemStats.BufferMutex.RLock()
+		buffer := b.SystemStats.Buffer
+		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
+		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
+		return ts.BufferSize, ts.CommitInterval
+	}
 	tsNode := greatTs.StatsList.Tail
 	for {
 		if tsNode == nil {
@@ -158,6 +168,7 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		}
 		action := tsNode.Data.A
 		if action.Action != types.BufferSize {
+			tsNode = tsNode.Prev
 			continue
 		}
 		ts.BufferSize = action.BufferSize
@@ -187,7 +198,7 @@ func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 		ts.V = V
 		return ts.K, ts.V
 	}
-	greatTs := b.findGreatestTsForBufferSize(ts)
+	greatTs := b.findGreatestTsForKAndV(ts)
 	if greatTs == nil {
 		K, V = randomGetKAndV()
 		ts.K = K
@@ -200,8 +211,10 @@ func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 }
 
 func randomGetKAndV() (K uint16, V uint32) {
-	KSet := []uint16{8, 16, 32, 64, 128, 256}
-	VSet := []uint32{256, 512, 1024, 2048, 4096}
+	//KSet := []uint16{8, 16, 32, 64, 128, 256}
+	KSet := []uint16{64}
+	//VSet := []uint32{256, 512, 1024, 2048, 4096}
+	VSet := []uint32{1024}
 	K = KSet[rand.Int()%len(KSet)]
 	V = VSet[rand.Int()%len(VSet)]
 	return
@@ -224,6 +237,13 @@ func (b *Brain) makeRandomDecision() bool {
 }
 
 func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
+	decisionNumber := rand.Int()
+	fmt.Printf("findGreatestTsForKAndV, decisionNumber = %d 开始处理\n", decisionNumber)
+
+	defer func() {
+		fmt.Printf("findGreatestTsForKAndV, decisionNumber = %d 处理结束\n", decisionNumber)
+	}()
+
 	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
 	distances := make([]*Distance, 0, len(randomSampleTss))
@@ -240,19 +260,21 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 				minDistance = distance
 			}
 		})
-		distances = append(distances, &Distance{
-			distance: minDistance,
-			id:       sampleTs.ID,
-		})
+		if minDistance != math.MaxFloat64 {
+			distances = append(distances, &Distance{
+				distance: minDistance,
+				id:       sampleTs.ID,
+			})
+		}
+	}
+	if len(distances) == 0 {
+		return nil
 	}
 	sort.Slice(distances, func(i, j int) bool {
 		return distances[i].distance < distances[j].distance
 	})
 	if len(distances) > conf.DecisionSetCount {
 		distances = distances[:conf.DecisionSetCount]
-	}
-	if len(distances) == 0 {
-		return nil
 	}
 	greatestTs := randomSampleTsMap[distances[0].id]
 	greatestP := greatestTs.StatsList.Tail.Prev.Data.P.P
@@ -268,10 +290,17 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 }
 
 func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
+	decisionNumber := rand.Int()
+	fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 开始处理\n", decisionNumber)
+
+	defer func() {
+		fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 处理结束\n", decisionNumber)
+	}()
+
 	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
 	distances := make([]*Distance, 0, len(randomSampleTss))
-	tsStats := ts.StatsList.Tail.Prev.Data // 最近的一次 buffer 生命周期中时间序列的统计数据
+	tsStats := ts.StatsList.Tail.Data // 最近的一次 buffer 生命周期中时间序列的统计数据，仅用于计算相似度
 	for _, sampleTs := range randomSampleTss {
 		randomSampleTsMap[sampleTs.ID] = sampleTs
 		minDistance := math.MaxFloat64
@@ -284,10 +313,15 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
 				minDistance = distance
 			}
 		})
-		distances = append(distances, &Distance{
-			distance: minDistance,
-			id:       sampleTs.ID,
-		})
+		if minDistance != math.MaxFloat64 { // 只有有过提交记录的时间序列才会被匹配到
+			distances = append(distances, &Distance{
+				distance: minDistance,
+				id:       sampleTs.ID,
+			})
+		}
+	}
+	if len(distances) == 0 { // 别的时间序列都还没提交过，你自求多福吧！
+		return nil
 	}
 	sort.Slice(distances, func(i, j int) bool {
 		return distances[i].distance < distances[j].distance
@@ -295,14 +329,20 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
 	if len(distances) > conf.DecisionSetCount {
 		distances = distances[:conf.DecisionSetCount]
 	}
-	greatestTs := ts
-	greatestP := ts.StatsList.Tail.Prev.Data.P.P
+	var greatestTs *stats.Ts = nil
+	var greatestP = 0.0
+
+	if ts.StatsList.Size > 1 { // 并不是第一个提交周期
+		greatestTs = ts
+		greatestP = ts.StatsList.Tail.Prev.Data.P.P
+	}
 	for _, distance := range distances {
 		id := distance.id
 		currentTs := randomSampleTsMap[id]
 		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
-		if currentP > greatestP {
+		if greatestTs == nil || currentP > greatestP {
 			greatestTs = currentTs
+			greatestP = currentP
 		}
 	}
 	return greatestTs

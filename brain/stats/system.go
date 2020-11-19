@@ -8,8 +8,8 @@ import (
 )
 
 type SystemStats struct {
-	TsMap map[[16]byte]*Ts
-	TsList []*Ts
+	TsMap     map[[16]byte]*Ts
+	TsList    []*Ts
 	TsStatsMu sync.RWMutex
 
 	Buffer      *BufferStats
@@ -25,9 +25,11 @@ type SystemStats struct {
 func (system *SystemStats) GetTs(id [16]byte) *Ts {
 	system.TsStatsMu.RLock()
 	if ts, ok := system.TsMap[id]; ok {
+		system.TsStatsMu.RUnlock() // 提前返回切记要释放锁！！
 		return ts
 	}
-	system.TsStatsMu.RUnlock()
+	system.TsStatsMu.RUnlock() // 就算是没有拿到，也要释放读锁，否则后面无法获取写锁
+
 	system.TsStatsMu.Lock()
 	if ts, ok := system.TsMap[id]; ok {
 		system.TsStatsMu.Unlock()
@@ -47,7 +49,7 @@ func (system *SystemStats) RandomSampleTs(count int) []*Ts {
 		return system.TsList[:]
 	}
 	begin := rand.Int() % (len(system.TsList) - count)
-	return system.TsList[begin:begin+count]
+	return system.TsList[begin : begin+count]
 }
 
 type BufferStats struct {
@@ -95,6 +97,8 @@ type StorageStats struct {
 
 func NewSystemStats() *SystemStats {
 	return &SystemStats{
+		TsMap:   make(map[[16]byte]*Ts, 100),
+		TsList:  make([]*Ts, 0, 100),
 		Storage: NewStorageStats(),
 		Cache:   NewCacheStats(),
 		Buffer:  NewBufferStats(),
