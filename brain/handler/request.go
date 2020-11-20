@@ -35,31 +35,24 @@ func (WriteRequestEventHandler) Process(e *types.Event) bool {
 		// 这个事件有可能是在前一个周期上报的
 		prevTsStats := tsStatsNode.Prev.Data
 		if prevTsStats.EndTime.After(e.Time) {
-			prevTsStats.Mutex.Lock()
 			if !prevTsStats.Closed {
-				// 上一个阶段还没有彻底封口
+				// 上一个阶段还没有彻底封口，还需要补偿一个请求才会封口
 				prevTsStats.AddRecord(&stats.Record{
 					Time: e.Time,
 					Size: count,
 					ConsumingTime: span,
 				})
-				prevTsStats.Mutex.Unlock()
-				prevTsStats.CalculateStatisticsAndPerformance()
-				prevTsStats.Closed = true
 				return true
 			}
-			prevTsStats.Mutex.Unlock()
 		}
 	}
 	// 这个事件一定是在本周期内插入的（虽然可能是在上个周期内到达的）
 	tsStats := tsStatsNode.Data
-	tsStats.Mutex.Lock()
 	tsStats.AddRecord(&stats.Record{
 		Time: e.Time,
 		Size: count,
 		ConsumingTime: span,
 	})
-	tsStats.Mutex.Unlock()
 	return true
 }
 

@@ -31,7 +31,7 @@ func (system *SystemStats) GetTs(id [16]byte) *Ts {
 	system.TsStatsMu.RUnlock() // 就算是没有拿到，也要释放读锁，否则后面无法获取写锁
 
 	system.TsStatsMu.Lock()
-	if ts, ok := system.TsMap[id]; ok {
+	if ts, ok := system.TsMap[id]; ok { // 在释放读锁到获取写锁这期间，可能已经有人往里面写入数据了
 		system.TsStatsMu.Unlock()
 		return ts
 	}

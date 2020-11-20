@@ -118,14 +118,14 @@ func (b *Brain) Emit(e *types.Event) {
 	//		}
 	//	}
 	//} ()()
-	eventNumber := rand.Int()
-	fmt.Printf("event: %v, id = %d 开始处理\n", e, eventNumber)
+	//eventNumber := rand.Int()
+	//fmt.Printf("event: %v, id = %d 开始处理\n", e, eventNumber)
 	for _, h := range b.handlers[e.Type] {
 		if !h.Process(e) {
 			break
 		}
 	}
-	fmt.Printf("event: %v, id = %d 处理完毕\n", e, eventNumber)
+	//fmt.Printf("event: %v, id = %d 处理完毕\n", e, eventNumber)
 }
 
 func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
@@ -237,12 +237,12 @@ func (b *Brain) makeRandomDecision() bool {
 }
 
 func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
-	decisionNumber := rand.Int()
-	fmt.Printf("findGreatestTsForKAndV, decisionNumber = %d 开始处理\n", decisionNumber)
-
-	defer func() {
-		fmt.Printf("findGreatestTsForKAndV, decisionNumber = %d 处理结束\n", decisionNumber)
-	}()
+	//decisionNumber := rand.Int()
+	//fmt.Printf("findGreatestTsForKAndV, decisionNumber = %d 开始处理\n", decisionNumber)
+	//
+	//defer func() {
+	//	fmt.Printf("findGreatestTsForKAndV, decisionNumber = %d 处理结束\n", decisionNumber)
+	//}()
 
 	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
@@ -290,12 +290,12 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 }
 
 func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
-	decisionNumber := rand.Int()
-	fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 开始处理\n", decisionNumber)
-
-	defer func() {
-		fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 处理结束\n", decisionNumber)
-	}()
+	//decisionNumber := rand.Int()
+	//fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 开始处理\n", decisionNumber)
+	//
+	//defer func() {
+	//	fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 处理结束\n", decisionNumber)
+	//}()
 
 	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))

@@ -4,7 +4,6 @@ import (
 	"github.com/iznauy/BTrDB/brain/conf"
 	"github.com/iznauy/BTrDB/brain/types"
 	"math"
-	"sync"
 	"time"
 )
 
@@ -30,7 +29,6 @@ type TsStats struct {
 	S       *State
 	P       *Performance
 	A       *Action
-	Mutex   sync.RWMutex
 	EndTime *time.Time
 	Closed  bool
 }
@@ -45,14 +43,12 @@ func NewTsStats() *TsStats {
 }
 
 func (stats *TsStats) AddRecord(record *Record) {
-	if stats.EndTime != nil { // 封口之后还插入数据，说明这个事件因为提交延迟导致晚于 commit 事件的提交
-		stats.Mutex.Lock()
-	}
 	stats.S.Records = append(stats.S.Records, record)
 	if stats.EndTime != nil {
+		// 封口之后还插入数据，说明这个事件因为提交延迟导致晚于 commit 事件的提交
 		// 重新计算一些统计信息
+		stats.Closed = true
 		stats.CalculateStatisticsAndPerformance()
-		stats.Mutex.Unlock()
 	}
 }
 
@@ -96,9 +92,10 @@ func (list *TsStatsList) Append(data *TsStats) {
 		list.Tail = node
 	}
 	list.Size += 1
-	// 如果 list 中的元素超了就把最前面的节点给清理掉
+	// 如果 list 存在元素数量限制，而且当前元素超了就把最前面的节点给清理掉
 	if list.MaxSize > 0 && list.MaxSize < list.Size {
 		list.Head = list.Head.Next
+		list.Size -= 1
 	}
 }
 
@@ -173,6 +170,10 @@ func (stats *TsStats) CalculateStatisticsAndPerformance() {
 		}
 	}
 	stats.P.P = SizeSum / TimeSum
+	// 针对封口了的 stats，则会将统计信息删除以释放空间
+	if stats.Closed {
+		stats.S.Records = nil
+	}
 }
 
 func calculateMeanAndStd(numbers []float64) (float64, float64) {

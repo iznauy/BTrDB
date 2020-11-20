@@ -100,20 +100,18 @@ func (CommitBufferEventHandler) Process(e *types.Event) bool {
 
 	ts := systemStats.GetTs(tool.UUIDToMapKey(e.Source))
 	tsStats := ts.StatsList.Tail.Data
-	tsStats.Mutex.Lock()
 	endTime := time.Now()
 	tsStats.EndTime = &endTime
-	tsStats.CalculateStatisticsAndPerformance()
+	full := e.Params["full"].(bool)
+	if !full {
+		tsStats.Closed = true // 假如是因为超时被强制提交，则直接封口，后续请求无法写入该 tsStats
+	}
 	tsStats.A = &stats.Action{
 		Action:         types.BufferSize,
 		BufferSize:     ts.BufferSize,
 		CommitInterval: ts.CommitInterval,
 	}
-	full := e.Params["full"].(bool)
-	if !full {
-		tsStats.Closed = true // 假如是因为超时被强制提交，则直接封口，后续请求无法写入该 tsStats
-	}
-	tsStats.Mutex.Unlock()
+	tsStats.CalculateStatisticsAndPerformance()
 	ts.StatsList.Append(stats.NewTsStats())
 	return true
 }
