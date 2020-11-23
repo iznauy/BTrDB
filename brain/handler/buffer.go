@@ -106,12 +106,5 @@ func (CommitBufferEventHandler) Process(e *types.Event) bool {
 	if !full {
 		tsStats.Closed = true // 假如是因为超时被强制提交，则直接封口，后续请求无法写入该 tsStats
 	}
-	tsStats.A = &stats.Action{
-		Action:         types.BufferSize,
-		BufferSize:     ts.BufferSize,
-		CommitInterval: ts.CommitInterval,
-	}
-	tsStats.CalculateStatisticsAndPerformance()
-	ts.StatsList.Append(stats.NewTsStats())
 	return true
 }

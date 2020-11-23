@@ -1,8 +1,8 @@
 package brain
 
 import (
-	"fmt"
 	"github.com/iznauy/BTrDB/brain/conf"
+	ownLog "github.com/iznauy/BTrDB/brain/log"
 	"github.com/iznauy/BTrDB/brain/stats"
 	"github.com/iznauy/BTrDB/brain/tool"
 	"github.com/iznauy/BTrDB/brain/types"
@@ -18,7 +18,10 @@ import (
 
 var B *Brain
 
-var log *logging.Logger
+var (
+	log     *logging.Logger
+	fileLog *ownLog.Logger
+)
 
 var (
 	appendTimes int64
@@ -41,7 +44,8 @@ func init() {
 		handlers:         map[types.EventType][]types.EventHandler{},
 	}
 	log = logging.MustGetLogger("log")
-	//	go BroadcastStatistics()
+	fileLog = ownLog.GetLogger()
+	go BroadcastStatistics()
 }
 
 type Brain struct {
@@ -133,10 +137,26 @@ func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
 }
 
 func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
+	bufferSize, commitInterval := b.getBufferMaxSizeAndCommitInterval(id)
+	systemStats := b.SystemStats
+	ts := systemStats.GetTs(tool.UUIDToMapKey(id))
+	tsStats := ts.StatsList.Tail.Data
+	tsStats.A = &stats.Action{
+		Action:         types.BufferSize,
+		BufferSize:     bufferSize,
+		CommitInterval: commitInterval,
+	}
+	tsStats.CalculateStatisticsAndPerformance()
+	ts.StatsList.Append(stats.NewTsStats())
+	return bufferSize, commitInterval
+}
+
+func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
 	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
 	if ts.LastCommitTime == nil { // 新时间序列只能采用平均法进行第一次决策！
 		ts.BufferSize = 5000 + uint64(rand.Int()%10000)
 		ts.CommitInterval = ts.BufferSize
+		fileLog.Info("新时间序列%s使用随机bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id, ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 非第一次决策，一定概率采用随机策略
@@ -145,6 +165,8 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		buffer := b.SystemStats.Buffer
 		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
 		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
+		b.SystemStats.BufferMutex.RUnlock()
+		fileLog.Info("采用随机决策，时间序列%s使用平均bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id, ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 不采用随机策略的话，先是从各个时间序列中随机选出50个，然后找出最相近的4个时间序列，随后附加上当前时间序列，最后再根据其当前性能进行排序
@@ -154,13 +176,14 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		buffer := b.SystemStats.Buffer
 		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
 		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
+		b.SystemStats.BufferMutex.RUnlock()
+		fileLog.Info("由于系统中未采样到可以学习的时间序列，因此采用随机策略，时间序列%s使用平均bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id, ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	tsNode := greatTs.StatsList.Tail
 	for {
 		if tsNode == nil {
-			fmt.Printf("That should not happened")
-			break
+			panic("That should not happened")
 		}
 		if tsNode.Data.P == nil {
 			tsNode = tsNode.Prev
@@ -173,12 +196,9 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		}
 		ts.BufferSize = action.BufferSize
 		ts.CommitInterval = action.CommitInterval
+		fileLog.Info("计算bufferSize和commitInterval时与%s最相近的时间序列为%s，K=%d，V=%d", id, string(greatTs.ID[:]), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
-	b.SystemStats.BufferMutex.RLock()
-	buffer := b.SystemStats.Buffer
-	ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
-	ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
 	return ts.BufferSize, ts.CommitInterval
 }
 
@@ -191,11 +211,17 @@ func (b *Brain) GetCacheMaxSize() uint64 {
 }
 
 func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
+	K, V = b.getKAndVForNewTimeSeries(id)
+	return
+}
+
+func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
 	if b.makeRandomDecision() {
 		K, V = randomGetKAndV()
 		ts.K = K
 		ts.V = V
+		fileLog.Info("%s计算KV时采用了随机策略，K=%d, V=%d", id, K, V)
 		return ts.K, ts.V
 	}
 	greatTs := b.findGreatestTsForKAndV(ts)
@@ -203,10 +229,12 @@ func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 		K, V = randomGetKAndV()
 		ts.K = K
 		ts.V = V
+		fileLog.Info("由于目前系统中未采样到可以学习的时间序列，因此%s计算KV时采用了随机策略，K=%d，V=%d", id, K, V)
 		return ts.K, ts.V
 	}
 	ts.K = greatTs.K
 	ts.V = greatTs.V
+	fileLog.Info("计算KV时与%s最相近的时间序列为%s，K=%d，V=%d", id, string(greatTs.ID[:]), K, V)
 	return ts.K, ts.V
 }
 

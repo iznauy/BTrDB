@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const logFile = "brain.log"
+const logFile = "/data/log/brain.log"
 
 var (
 	logger *Logger
