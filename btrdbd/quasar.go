@@ -194,7 +194,7 @@ func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("BAD INSERT: ", r)
-			log.Errorf("openTree buffer maxsize = %d, buffer size = %d， UUID = %s", tr.bufferMaxSize, tr.store.Len(), id.String())
+			log.Errorf("openTree buffer maxsize = %d, UUID = %s", tr.bufferMaxSize, id.String())
 		}
 	}()
 	mtx.Lock()
