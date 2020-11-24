@@ -158,7 +158,7 @@ func (q *Quasar) getTree(id uuid.UUID) (*openTree, *sync.Mutex) {
 
 // 提交缓冲区中的数据
 func (t *openTree) commit(q *Quasar) {
-	if t.store != nil && t.store.Len() == 0 {
+	if t.store == nil || t.store.Len() == 0 {
 		//This might happen with a race in the timeout commit
 		fmt.Println("no store in commit")
 		return

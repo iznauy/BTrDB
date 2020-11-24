@@ -156,8 +156,8 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
 	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
 	if ts.LastCommitTime == nil { // 新时间序列只能采用平均法进行第一次决策！
-		ts.BufferSize = 5000 + uint64(rand.Int()%10000)
-		ts.CommitInterval = ts.BufferSize
+		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
+		ts.CommitInterval = 2000 + uint64(rand.Int()%18000)
 		now := time.Now()
 		ts.LastCommitTime = &now
 		fileLog.Info("新时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
