@@ -13,7 +13,7 @@ import (
 
 var ser_buf_pool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, 4096)
+		return make([]byte, 8192)
 	},
 }
 

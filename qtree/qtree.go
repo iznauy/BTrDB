@@ -2,7 +2,6 @@ package qtree
 
 import (
 	"errors"
-	"fmt"
 	"github.com/iznauy/BTrDB/brain"
 	"github.com/op/go-logging"
 	"math"
@@ -623,12 +622,6 @@ func (tr *QTree) InsertValues(buffer Buffer) (e error) {
 	}
 
 	//
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered insertvalues panic", r)
-			e = ErrBadInsert
-		}
-	}()
 	sort.Sort(RecordSlice(proc_records))
 	n, err := tr.root.InsertValues(proc_records) // 将数据插入节点中，但是还没有持久化到磁盘中
 	if err != nil {

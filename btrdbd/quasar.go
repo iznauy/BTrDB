@@ -191,12 +191,6 @@ func (t *openTree) commit(q *Quasar) {
 // 插入数据点，如果没达到 buffer 限制，将数据插入到 buffer，否则将会提前刷新数据
 func (q *Quasar) InsertValues(id uuid.UUID, r []qtree.Record) {
 	tr, mtx := q.getTree(id)
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("BAD INSERT: ", r)
-			log.Errorf("openTree buffer maxsize = %d, UUID = %s", tr.bufferMaxSize, id.String())
-		}
-	}()
 	mtx.Lock()
 	if tr == nil {
 		log.Panicf("This should not happen")

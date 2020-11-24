@@ -59,7 +59,7 @@ func (l *Logger) daemon() {
 		if len(buffer) == 0 {
 			continue
 		}
-		if _, err := l.fd.Write([]byte(strings.Join(buffer, "\n"))); err != nil {
+		if _, err := l.fd.Write([]byte(strings.Join(buffer, "\n") + "\n")); err != nil {
 			panic(err)
 		}
 		if err := l.fd.Sync(); err != nil {
