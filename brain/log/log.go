@@ -33,7 +33,7 @@ func newLogger() *Logger {
 		panic(err)
 	}
 	l.fd = fd
-	l.daemon()
+	go l.daemon()
 	return l
 }
 
