@@ -160,7 +160,7 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		ts.CommitInterval = ts.BufferSize
 		now := time.Now()
 		ts.LastCommitTime = &now
-		fileLog.Info("新时间序列%s使用随机bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id, ts.BufferSize, ts.CommitInterval)
+		fileLog.Info("新时间序列%s使用随机bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 非第一次决策，一定概率采用随机策略
@@ -170,7 +170,7 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
 		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
 		b.SystemStats.BufferMutex.RUnlock()
-		fileLog.Info("采用随机决策，时间序列%s使用平均bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id, ts.BufferSize, ts.CommitInterval)
+		fileLog.Info("采用随机决策，时间序列%s使用平均bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 不采用随机策略的话，先是从各个时间序列中随机选出50个，然后找出最相近的4个时间序列，随后附加上当前时间序列，最后再根据其当前性能进行排序
@@ -181,7 +181,7 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
 		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
 		b.SystemStats.BufferMutex.RUnlock()
-		fileLog.Info("由于系统中未采样到可以学习的时间序列，因此采用随机策略，时间序列%s使用平均bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id, ts.BufferSize, ts.CommitInterval)
+		fileLog.Info("由于系统中未采样到可以学习的时间序列，因此采用随机策略，时间序列%s使用平均bufferSize和commitInterval。bufferSize=%d, commitInterval=%d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	tsNode := greatTs.StatsList.Tail
@@ -200,7 +200,7 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		}
 		ts.BufferSize = action.BufferSize
 		ts.CommitInterval = action.CommitInterval
-		fileLog.Info("计算bufferSize和commitInterval时与%s最相近的时间序列为%s，K=%d，V=%d", id, string(greatTs.ID[:]), ts.BufferSize, ts.CommitInterval)
+		fileLog.Info("计算bufferSize和commitInterval时与%s最相近的时间序列为%s，K=%d，V=%d", id.String(), string(greatTs.ID[:]), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	return ts.BufferSize, ts.CommitInterval
@@ -225,7 +225,7 @@ func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 		K, V = randomGetKAndV()
 		ts.K = K
 		ts.V = V
-		fileLog.Info("%s计算KV时采用了随机策略，K=%d, V=%d", id, K, V)
+		fileLog.Info("%s计算KV时采用了随机策略，K=%d, V=%d", id.String(), K, V)
 		return ts.K, ts.V
 	}
 	greatTs := b.findGreatestTsForKAndV(ts)
@@ -233,12 +233,12 @@ func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 		K, V = randomGetKAndV()
 		ts.K = K
 		ts.V = V
-		fileLog.Info("由于目前系统中未采样到可以学习的时间序列，因此%s计算KV时采用了随机策略，K=%d，V=%d", id, K, V)
+		fileLog.Info("由于目前系统中未采样到可以学习的时间序列，因此%s计算KV时采用了随机策略，K=%d，V=%d", id.String(), K, V)
 		return ts.K, ts.V
 	}
 	ts.K = greatTs.K
 	ts.V = greatTs.V
-	fileLog.Info("计算KV时与%s最相近的时间序列为%s，K=%d，V=%d", id, string(greatTs.ID[:]), K, V)
+	fileLog.Info("计算KV时与%s最相近的时间序列为%s，K=%d，V=%d", id.String(), string(greatTs.ID[:]), K, V)
 	return ts.K, ts.V
 }
 
@@ -371,6 +371,9 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
 	for _, distance := range distances {
 		id := distance.id
 		currentTs := randomSampleTsMap[id]
+		if currentTs.StatsList.Size < 2 {
+			continue
+		}
 		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
 		if greatestTs == nil || currentP > greatestP {
 			greatestTs = currentTs

@@ -48,7 +48,9 @@ func (stats *TsStats) AddRecord(record *Record) {
 		// 封口之后还插入数据，说明这个事件因为提交延迟导致晚于 commit 事件的提交
 		// 重新计算一些统计信息
 		stats.Closed = true
-		stats.CalculateStatisticsAndPerformance()
+		if stats.P != nil {
+			stats.CalculateStatisticsAndPerformance()
+		}
 	}
 }
 

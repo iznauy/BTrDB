@@ -39,7 +39,7 @@ func newLogger() *Logger {
 
 func (l *Logger) Info(format string, a ...interface{}) {
 	now := time.Now().Unix()
-	content := fmt.Sprintf(format, a)
+	content := fmt.Sprintf(format, a...)
 	l.mu.Lock()
 	l.buffer = append(l.buffer, fmt.Sprintf("%d %s", now, content))
 	l.mu.Unlock()
