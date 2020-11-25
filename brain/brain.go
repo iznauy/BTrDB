@@ -165,12 +165,9 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 	}
 	// 非第一次决策，一定概率采用随机策略
 	if b.makeRandomDecision() {
-		b.SystemStats.BufferMutex.RLock()
-		buffer := b.SystemStats.Buffer
-		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
-		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
-		b.SystemStats.BufferMutex.RUnlock()
-		fileLog.Info("采用随机决策，时间序列 %s 使用平均 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
+		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
+		ts.CommitInterval = 2000 + uint64(rand.Int()%18000)
+		fileLog.Info("时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 不采用随机策略的话，先是从各个时间序列中随机选出50个，然后找出最相近的4个时间序列，随后附加上当前时间序列，最后再根据其当前性能进行排序
