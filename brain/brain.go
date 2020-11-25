@@ -303,10 +303,10 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 	for _, distance := range distances {
 		id := distance.id
 		currentTs := randomSampleTsMap[id]
-		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
 		if currentTs.StatsList.Size < 2 {
 			continue
 		}
+		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
 		if currentP > greatestP {
 			greatestTs = currentTs
 		}

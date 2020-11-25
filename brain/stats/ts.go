@@ -169,7 +169,7 @@ func (stats *TsStats) CalculateStatisticsAndPerformance(id string) {
 		SizeSum += float64(record.Size)
 		TimeSum += float64(record.ConsumingTime)
 		if i > 0 {
-			DeltaTimeSlice = append(DeltaTimeSlice, float64((record.Time.UnixNano()-LastTime)/1e3))
+			DeltaTimeSlice = append(DeltaTimeSlice, float64((record.Time.UnixNano()-LastTime)/1e6))
 		}
 		LastTime = record.Time.UnixNano()
 	}
