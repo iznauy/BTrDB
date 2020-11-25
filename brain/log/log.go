@@ -37,11 +37,10 @@ func newLogger() *Logger {
 	return l
 }
 
-func (l *Logger) Info(format string, a ...interface{}) {
-	now := time.Now().Unix()
+func (l *Logger) Info(decisionId int, format string, a ...interface{}) {
 	content := fmt.Sprintf(format, a...)
 	l.mu.Lock()
-	l.buffer = append(l.buffer, fmt.Sprintf("%d %s", now, content))
+	l.buffer = append(l.buffer, fmt.Sprintf("%d %s", decisionId, content))
 	l.mu.Unlock()
 }
 

@@ -137,7 +137,8 @@ func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
 }
 
 func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
-	bufferSize, commitInterval := b.getBufferMaxSizeAndCommitInterval(id)
+	decisionId := rand.Int()
+	bufferSize, commitInterval := b.getBufferMaxSizeAndCommitInterval(id, decisionId)
 	systemStats := b.SystemStats
 	ts := systemStats.GetTs(tool.UUIDToMapKey(id))
 	if ts.StatsList.Size != 0 { //
@@ -147,38 +148,35 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 			BufferSize:     bufferSize,
 			CommitInterval: commitInterval,
 		}
-		tsStats.CalculateStatisticsAndPerformance()
+		tsStats.CalculateStatisticsAndPerformance(id.String())
 		ts.StatsList.Append(stats.NewTsStats())
 	}
 	return bufferSize, commitInterval
 }
 
-func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
+func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID, decisionId int) (uint64, uint64) {
 	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
 	if ts.LastCommitTime == nil { // 新时间序列只能采用平均法进行第一次决策！
 		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
 		ts.CommitInterval = 2000 + uint64(rand.Int()%18000)
 		now := time.Now()
 		ts.LastCommitTime = &now
-		fileLog.Info("新时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
+		fileLog.Info(decisionId, "新时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 非第一次决策，一定概率采用随机策略
 	if b.makeRandomDecision() {
 		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
 		ts.CommitInterval = 2000 + uint64(rand.Int()%18000)
-		fileLog.Info("时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
+		fileLog.Info(decisionId, "时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	// 不采用随机策略的话，先是从各个时间序列中随机选出50个，然后找出最相近的4个时间序列，随后附加上当前时间序列，最后再根据其当前性能进行排序
-	greatTs := b.findGreatestTsForBufferSize(ts)
+	greatTs := b.findGreatestTsForBufferSize(ts, decisionId)
 	if greatTs == nil { // 有可能当前所有的时间序列都没有先验知识，那我们还是只能采用随机策略
-		b.SystemStats.BufferMutex.RLock()
-		buffer := b.SystemStats.Buffer
-		ts.BufferSize = buffer.TotalAnnouncedSpace / buffer.TimeSeriesInMemory
-		ts.CommitInterval = buffer.TotalCommitInterval / buffer.TimeSeriesInMemory
-		b.SystemStats.BufferMutex.RUnlock()
-		fileLog.Info("由于系统中未采样到可以学习的时间序列，因此采用随机策略，时间序列 %s 使用平均 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
+		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
+		ts.CommitInterval = 2000 + uint64(rand.Int()%18000)
+		fileLog.Info(decisionId, "由于系统中未采样到可以学习的时间序列，因此时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	tsNode := greatTs.StatsList.Tail
@@ -197,7 +195,7 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 		}
 		ts.BufferSize = action.BufferSize
 		ts.CommitInterval = action.CommitInterval
-		fileLog.Info("计算 bufferSize 和 commitInterval 时与 %s 最相近的时间序列为 %s，bufferSize = %d，commitInterval = %d", id.String(), uuid.UUID(greatTs.ID[:]).String(), ts.BufferSize, ts.CommitInterval)
+		fileLog.Info(decisionId, "计算 bufferSize 和 commitInterval 时与 %s 最相近的时间序列为 %s，bufferSize = %d，commitInterval = %d", id.String(), uuid.UUID(greatTs.ID[:]).String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
 	return ts.BufferSize, ts.CommitInterval
@@ -217,12 +215,13 @@ func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 }
 
 func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
+	decisionId := rand.Int()
 	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
 	if b.makeRandomDecision() {
 		K, V = randomGetKAndV()
 		ts.K = K
 		ts.V = V
-		fileLog.Info("%s 计算KV时采用了随机策略，K = %d, V = %d", id.String(), K, V)
+		fileLog.Info(decisionId, "%s 计算KV时采用了随机策略，K = %d, V = %d", id.String(), K, V)
 		return ts.K, ts.V
 	}
 	greatTs := b.findGreatestTsForKAndV(ts)
@@ -230,12 +229,12 @@ func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 		K, V = randomGetKAndV()
 		ts.K = K
 		ts.V = V
-		fileLog.Info("由于目前系统中未采样到可以学习的时间序列，因此 %s 计算KV时采用了随机策略，K = %d，V = %d", id.String(), K, V)
+		fileLog.Info(decisionId, "由于目前系统中未采样到可以学习的时间序列，因此 %s 计算KV时采用了随机策略，K = %d，V = %d", id.String(), K, V)
 		return ts.K, ts.V
 	}
 	ts.K = greatTs.K
 	ts.V = greatTs.V
-	fileLog.Info("计算KV时与 %s 最相近的时间序列为 %s，K = %d，V = %d", id.String(), uuid.UUID(greatTs.ID[:]).String(), K, V)
+	fileLog.Info(decisionId, "计算KV时与 %s 最相近的时间序列为 %s，K = %d，V = %d", id.String(), uuid.UUID(greatTs.ID[:]).String(), K, V)
 	return ts.K, ts.V
 }
 
@@ -315,20 +314,15 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 	return greatestTs
 }
 
-func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
-	//decisionNumber := rand.Int()
-	//fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 开始处理\n", decisionNumber)
-	//
-	//defer func() {
-	//	fmt.Printf("findGreatestTsForBufferSize, decisionNumber = %d 处理结束\n", decisionNumber)
-	//}()
-
+func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts, decisionId int) *stats.Ts {
 	randomSampleTss := b.SystemStats.RandomSampleTs(conf.SampleCount)
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
 	distances := make([]*Distance, 0, len(randomSampleTss))
 	tsStats := ts.StatsList.Tail.Data // 最近的一次 buffer 生命周期中时间序列的统计数据，仅用于计算相似度
+	fileLog.Info(decisionId, "当前时间序列 %s 的状态为 %s", uuid.UUID(ts.ID[:]).String(), tsStats.S.String())
 	for _, sampleTs := range randomSampleTss {
 		randomSampleTsMap[sampleTs.ID] = sampleTs
+		var bestStats *stats.TsStats
 		minDistance := math.MaxFloat64
 		sampleTs.StatsList.Foreach(func(stats *stats.TsStats) {
 			if stats.P == nil {
@@ -337,6 +331,7 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
 			distance := stats.S.Distance(tsStats.S)
 			if minDistance > distance {
 				minDistance = distance
+				bestStats = stats
 			}
 		})
 		if minDistance != math.MaxFloat64 { // 只有有过提交记录的时间序列才会被匹配到
@@ -344,6 +339,8 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
 				distance: minDistance,
 				id:       sampleTs.ID,
 			})
+			fileLog.Info(decisionId, "时间序列 %s 与当前时间序列 %s 的距离为 %f, 其状态为 %s", uuid.UUID(sampleTs.ID[:]).String(), uuid.UUID(ts.ID[:]).String(), minDistance,
+				bestStats.S.String())
 		}
 	}
 	if len(distances) == 0 { // 别的时间序列都还没提交过，你自求多福吧！
@@ -369,10 +366,16 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts) *stats.Ts {
 			continue
 		}
 		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
+		fileLog.Info(decisionId, "比较相似的时间序列 %s 的性能为：%f", uuid.UUID(currentTs.ID[:]).String(), currentP)
 		if greatestTs == nil || currentP > greatestP {
 			greatestTs = currentTs
 			greatestP = currentP
 		}
+	}
+	if greatestTs != nil {
+		fileLog.Info(decisionId, "相似的时间序列中，性能最好的为 %s, 其性能为 %f", uuid.UUID(greatestTs.ID[:]).String(), greatestP)
+	} else {
+		fileLog.Info(decisionId, "系统内数据过少，没有足够的数据找到最相近的时间序列")
 	}
 	return greatestTs
 }

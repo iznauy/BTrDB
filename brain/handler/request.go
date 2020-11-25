@@ -5,6 +5,7 @@ import (
 	"github.com/iznauy/BTrDB/brain/stats"
 	"github.com/iznauy/BTrDB/brain/tool"
 	"github.com/iznauy/BTrDB/brain/types"
+	"github.com/pborman/uuid"
 )
 
 type ReadRequestEventHandler struct {}
@@ -30,6 +31,7 @@ func (WriteRequestEventHandler) Process(e *types.Event) bool {
 
 	systemStats := brain.B.SystemStats
 	ts := systemStats.GetTs(tool.UUIDToMapKey(e.Source))
+	id := uuid.UUID(e.Source).String()
 	tsStatsNode := ts.StatsList.Tail
 	if tsStatsNode.Prev != nil {
 		// 这个事件有可能是在前一个周期上报的
@@ -41,7 +43,7 @@ func (WriteRequestEventHandler) Process(e *types.Event) bool {
 					Time: e.Time,
 					Size: count,
 					ConsumingTime: span,
-				})
+				}, id)
 				return true
 			}
 		}
@@ -52,7 +54,7 @@ func (WriteRequestEventHandler) Process(e *types.Event) bool {
 		Time: e.Time,
 		Size: count,
 		ConsumingTime: span,
-	})
+	}, id)
 	return true
 }
 

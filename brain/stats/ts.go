@@ -1,11 +1,19 @@
 package stats
 
 import (
+	"fmt"
 	"github.com/iznauy/BTrDB/brain/conf"
+	"github.com/iznauy/BTrDB/brain/log"
 	"github.com/iznauy/BTrDB/brain/types"
 	"math"
 	"time"
 )
+
+var fileLog *log.Logger
+
+func init()  {
+	fileLog = log.GetLogger()
+}
 
 type Ts struct {
 	StatsList      *TsStatsList
@@ -42,14 +50,14 @@ func NewTsStats() *TsStats {
 	}
 }
 
-func (stats *TsStats) AddRecord(record *Record) {
+func (stats *TsStats) AddRecord(record *Record, id string) {
 	stats.S.Records = append(stats.S.Records, record)
 	if stats.EndTime != nil {
 		// 封口之后还插入数据，说明这个事件因为提交延迟导致晚于 commit 事件的提交
 		// 重新计算一些统计信息
 		stats.Closed = true
 		if stats.P != nil {
-			stats.CalculateStatisticsAndPerformance()
+			stats.CalculateStatisticsAndPerformance(id)
 		}
 	}
 }
@@ -126,6 +134,11 @@ func (s *State) Distance(anotherS *State) float64 {
 		DeltaTimeMeanDelta*DeltaTimeMeanDelta + DeltaTimeStdDelta*DeltaTimeStdDelta
 }
 
+func (s *State) String() string {
+	return fmt.Sprintf("State: {SizeMean: %f, SizeStd: %f, DeltaTimeMean: %f, DeltaTimeStd: %f}", s.SizeMean, s.SizeStd,
+		s.DeltaTimeMean, s.DeltaTimeStd)
+}
+
 type Record struct {
 	Time          time.Time // 进行插入的时间
 	Size          int64
@@ -142,7 +155,7 @@ type Action struct {
 	CommitInterval uint64
 }
 
-func (stats *TsStats) CalculateStatisticsAndPerformance() {
+func (stats *TsStats) CalculateStatisticsAndPerformance(id string) {
 	if len(stats.S.Records) == 0 {
 		return
 	}
@@ -175,6 +188,7 @@ func (stats *TsStats) CalculateStatisticsAndPerformance() {
 	// 针对封口了的 stats，则会将统计信息删除以释放空间
 	if stats.Closed {
 		stats.S.Records = nil
+		fileLog.Info(0, "%s 的性能为 %f", id, stats.P.P)
 	}
 }
 
