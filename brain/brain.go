@@ -240,13 +240,7 @@ func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
 }
 
 func randomGetKAndV() (K uint16, V uint32) {
-	//KSet := []uint16{8, 16, 32, 64, 128, 256}
-	KSet := []uint16{64}
-	//VSet := []uint32{256, 512, 1024, 2048, 4096}
-	VSet := []uint32{1024}
-	K = KSet[rand.Int()%len(KSet)]
-	V = VSet[rand.Int()%len(VSet)]
-	return
+	return 64, 1024
 }
 
 func (b *Brain) RegisterEventHandler(tp types.EventType, handler types.EventHandler) {
@@ -311,6 +305,9 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 		id := distance.id
 		currentTs := randomSampleTsMap[id]
 		currentP := randomSampleTsMap[id].StatsList.Tail.Prev.Data.P.P
+		if currentTs.StatsList.Size < 2 {
+			continue
+		}
 		if currentP > greatestP {
 			greatestTs = currentTs
 		}
