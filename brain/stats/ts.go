@@ -155,6 +155,32 @@ type Action struct {
 	CommitInterval uint64
 }
 
+func (stats *TsStats) CalculateStatistics() {
+	if len(stats.S.Records) == 0 {
+		return
+	}
+	SizeSum := 0.0
+	TimeSum := 0.0
+	LastTime := int64(0)
+	SizeSlice := make([]float64, 0, len(stats.S.Records))
+	DeltaTimeSlice := make([]float64, 0, len(stats.S.Records)-1)
+	for i, record := range stats.S.Records {
+		SizeSlice = append(SizeSlice, float64(record.Size))
+		SizeSum += float64(record.Size)
+		TimeSum += float64(record.ConsumingTime)
+		if i > 0 {
+			DeltaTimeSlice = append(DeltaTimeSlice, float64((record.Time.UnixNano()-LastTime)/1e6))
+		}
+		LastTime = record.Time.UnixNano()
+	}
+	SizeMean, SizeStd := calculateMeanAndStd(SizeSlice)
+	DeltaTimeMean, DeltaTimeStd := calculateMeanAndStd(DeltaTimeSlice)
+	stats.S.SizeMean = SizeMean
+	stats.S.SizeStd = SizeStd
+	stats.S.DeltaTimeMean = DeltaTimeMean
+	stats.S.DeltaTimeStd = DeltaTimeStd
+}
+
 func (stats *TsStats) CalculateStatisticsAndPerformance(id string) {
 	if len(stats.S.Records) == 0 {
 		return
