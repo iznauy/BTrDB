@@ -218,8 +218,8 @@ func (b *Brain) GetCacheMaxSize() uint64 {
 }
 
 func (b *Brain) GetKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
-	K, V = b.getKAndVForNewTimeSeries(id)
-	return
+	//K, V = b.getKAndVForNewTimeSeries(id)
+	return 64, 1024
 }
 
 func (b *Brain) getKAndVForNewTimeSeries(id uuid.UUID) (K uint16, V uint32) {
