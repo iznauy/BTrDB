@@ -139,22 +139,24 @@ func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
 func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
 	decisionId := rand.Int()
 	bufferSize, commitInterval := b.getBufferMaxSizeAndCommitInterval(id, decisionId)
-	systemStats := b.SystemStats
-	ts := systemStats.GetTs(tool.UUIDToMapKey(id))
-	if ts.StatsList.Size != 0 { //
+	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
+	if ts.StatsList.Size != 0 {
 		tsStats := ts.StatsList.Tail.Data
-		tsStats.A = &stats.Action{
-			Action:         types.BufferSize,
-			BufferSize:     bufferSize,
-			CommitInterval: commitInterval,
+		if tsStats.Period == 0 {
+			tsStats.A = &stats.Action{
+				Action:         types.BufferSize,
+				BufferSize:     bufferSize,
+				CommitInterval: commitInterval,
+			}
+			tsStats.CalculateStatisticsAndPerformance(id.String())
+			ts.StatsList.Append(stats.NewTsStats())
 		}
-		tsStats.CalculateStatisticsAndPerformance(id.String())
-		ts.StatsList.Append(stats.NewTsStats())
 	}
 	return bufferSize, commitInterval
 }
 
 func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID, decisionId int) (uint64, uint64) {
+	fileLog.Info(decisionId, "关于时间序列 %s 的决策", id.String())
 	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
 	if ts.LastCommitTime == nil { // 新时间序列只能采用平均法进行第一次决策！
 		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
@@ -164,7 +166,13 @@ func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID, decisionId int) 
 		fileLog.Info(decisionId, "新时间序列 %s 使用随机 bufferSize 和 commitInterval。bufferSize = %d, commitInterval = %d", id.String(), ts.BufferSize, ts.CommitInterval)
 		return ts.BufferSize, ts.CommitInterval
 	}
-	// 非第一次决策，一定概率采用随机策略
+	// 多个周期后才会变换
+	tail := ts.StatsList.Tail.Data
+	if tail.Period != 0 {
+		fileLog.Info(decisionId, "时间序列 %s 还有 %d 周期进行下次决策", id.String(), tail.Period)
+		return ts.BufferSize, ts.CommitInterval
+	}
+	// 一定概率采用随机策略
 	if b.makeRandomDecision() {
 		ts.BufferSize = 1000 + uint64(rand.Int()%9000)
 		ts.CommitInterval = 2000 + uint64(rand.Int()%18000)
@@ -329,6 +337,8 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts, decisionId int) *stats
 				return
 			}
 			distance := stats.S.Distance(tsStats.S)
+			distance += (stats.P.P * conf.PerformanceBalanceFactor - tsStats.P.P * conf.PerformanceBalanceFactor) *
+				(stats.P.P * conf.PerformanceBalanceFactor - tsStats.P.P * conf.PerformanceBalanceFactor)
 			if minDistance > distance {
 				minDistance = distance
 				bestStats = stats

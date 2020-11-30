@@ -11,7 +11,7 @@ import (
 
 var fileLog *log.Logger
 
-func init()  {
+func init() {
 	fileLog = log.GetLogger()
 }
 
@@ -37,6 +37,7 @@ type TsStats struct {
 	S       *State
 	P       *Performance
 	A       *Action
+	Period  int
 	EndTime *time.Time
 	Closed  bool
 }
@@ -46,6 +47,7 @@ func NewTsStats() *TsStats {
 		S: &State{
 			Records: make([]*Record, 0, 1),
 		},
+		Period: conf.DecisionIntervalPeriods,
 		Closed: false,
 	}
 }

@@ -100,11 +100,14 @@ func (CommitBufferEventHandler) Process(e *types.Event) bool {
 
 	ts := systemStats.GetTs(tool.UUIDToMapKey(e.Source))
 	tsStats := ts.StatsList.Tail.Data
-	endTime := time.Now()
-	tsStats.EndTime = &endTime
-	full := e.Params["full"].(bool)
-	if !full {
-		tsStats.Closed = true // 假如是因为超时被强制提交，则直接封口，后续请求无法写入该 tsStats
+	tsStats.Period -= 1
+	if tsStats.Period == 0 {  // 读条完了才会计算是不是满了
+		endTime := time.Now()
+		tsStats.EndTime = &endTime
+		full := e.Params["full"].(bool)
+		if !full {
+			tsStats.Closed = true // 假如是因为超时被强制提交，则直接封口，后续请求无法写入该 tsStats
+		}
 	}
 	return true
 }
