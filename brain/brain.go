@@ -278,7 +278,7 @@ func (b *Brain) findGreatestTsForKAndV(ts *stats.Ts) *stats.Ts {
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
 	distances := make([]*Distance, 0, len(randomSampleTss))
 	tsStats := ts.StatsList.Tail.Data
-	tsStats.CalculateStatistics()
+	tsStats.CalculateStatisticsAndGetP()
 	for _, sampleTs := range randomSampleTss {
 		randomSampleTsMap[sampleTs.ID] = sampleTs
 		minDistance := math.MaxFloat64
@@ -328,7 +328,7 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts, decisionId int) *stats
 	randomSampleTsMap := make(map[[16]byte]*stats.Ts, len(randomSampleTss))
 	distances := make([]*Distance, 0, len(randomSampleTss))
 	tsStats := ts.StatsList.Tail.Data // 最近的一次 buffer 生命周期中时间序列的统计数据，仅用于计算相似度
-	tsStats.CalculateStatistics()
+	P := tsStats.CalculateStatisticsAndGetP()
 	fileLog.Info(decisionId, "当前时间序列 %s 的状态为 %s", uuid.UUID(ts.ID[:]).String(), tsStats.S.String())
 	for _, sampleTs := range randomSampleTss {
 		randomSampleTsMap[sampleTs.ID] = sampleTs
@@ -339,8 +339,8 @@ func (b *Brain) findGreatestTsForBufferSize(ts *stats.Ts, decisionId int) *stats
 				return
 			}
 			distance := stats.S.Distance(tsStats.S)
-			distance += (stats.P.P * conf.PerformanceBalanceFactor - tsStats.P.P * conf.PerformanceBalanceFactor) *
-				(stats.P.P * conf.PerformanceBalanceFactor - tsStats.P.P * conf.PerformanceBalanceFactor)
+			distance += (stats.P.P * conf.PerformanceBalanceFactor - P * conf.PerformanceBalanceFactor) *
+				(stats.P.P * conf.PerformanceBalanceFactor - P * conf.PerformanceBalanceFactor)
 			if minDistance > distance {
 				minDistance = distance
 				bestStats = stats

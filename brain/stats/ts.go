@@ -157,9 +157,9 @@ type Action struct {
 	CommitInterval uint64
 }
 
-func (stats *TsStats) CalculateStatistics() {
+func (stats *TsStats) CalculateStatisticsAndGetP() float64 {
 	if len(stats.S.Records) == 0 {
-		return
+		return 0.0
 	}
 	SizeSum := 0.0
 	TimeSum := 0.0
@@ -181,6 +181,7 @@ func (stats *TsStats) CalculateStatistics() {
 	stats.S.SizeStd = SizeStd
 	stats.S.DeltaTimeMean = DeltaTimeMean
 	stats.S.DeltaTimeStd = DeltaTimeStd
+	return SizeSum / TimeSum
 }
 
 func (stats *TsStats) CalculateStatisticsAndPerformance(id string) {
