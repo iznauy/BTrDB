@@ -124,11 +124,11 @@ func (b *Brain) Emit(e *types.Event) {
 	//} ()()
 	//eventNumber := rand.Int()
 	//fmt.Printf("event: %v, id = %d 开始处理\n", e, eventNumber)
-	for _, h := range b.handlers[e.Type] {
-		if !h.Process(e) {
-			break
-		}
-	}
+	//for _, h := range b.handlers[e.Type] {
+	//	if !h.Process(e) {
+	//		break
+	//	}
+	//}
 	//fmt.Printf("event: %v, id = %d 处理完毕\n", e, eventNumber)
 }
 
@@ -137,22 +137,24 @@ func (b *Brain) GetReadAndWriteLimiter() (int64, int64) {
 }
 
 func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64) {
-	decisionId := rand.Int()
-	bufferSize, commitInterval := b.getBufferMaxSizeAndCommitInterval(id, decisionId)
-	ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
-	if ts.StatsList.Size != 0 {
-		tsStats := ts.StatsList.Tail.Data
-		if tsStats.Period == 0 {
-			tsStats.A = &stats.Action{
-				Action:         types.BufferSize,
-				BufferSize:     bufferSize,
-				CommitInterval: commitInterval,
-			}
-			tsStats.CalculateStatisticsAndPerformance(id.String())
-			ts.StatsList.Append(stats.NewTsStats())
-		}
-	}
-	return bufferSize, commitInterval
+	//decisionId := rand.Int()
+	//bufferSize, commitInterval := b.getBufferMaxSizeAndCommitInterval(id, decisionId)
+	//ts := b.SystemStats.GetTs(tool.UUIDToMapKey(id))
+	//if ts.StatsList.Size != 0 {
+	//	tsStats := ts.StatsList.Tail.Data
+	//	if tsStats.Period == 0 {
+	//		tsStats.A = &stats.Action{
+	//			Action:         types.BufferSize,
+	//			BufferSize:     bufferSize,
+	//			CommitInterval: commitInterval,
+	//		}
+	//		tsStats.CalculateStatisticsAndPerformance(id.String())
+	//		ts.StatsList.Append(stats.NewTsStats())
+	//	}
+	//}
+	//return bufferSize, commitInterval
+	randValue := rand.Int() * 10000 + 10000
+	return uint64(randValue), uint64(randValue)
 }
 
 func (b *Brain) getBufferMaxSizeAndCommitInterval(id uuid.UUID, decisionId int) (uint64, uint64) {
