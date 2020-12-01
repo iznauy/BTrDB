@@ -6,6 +6,6 @@ const (
 	Beta                    = 0.999
 	SampleCount             = 50
 	DecisionSetCount        = 4
-	DecisionIntervalPeriods = 10
+	DecisionIntervalPeriods = 20
 	PerformanceBalanceFactor = 2000
 )
