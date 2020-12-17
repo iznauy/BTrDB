@@ -153,7 +153,7 @@ func (b *Brain) GetBufferMaxSizeAndCommitInterval(id uuid.UUID) (uint64, uint64)
 	//	}
 	//}
 	//return bufferSize, commitInterval
-	randValue := rand.Int() * 10000 + 10000
+	randValue := rand.Int() % 10000 + 10000
 	return uint64(randValue), uint64(randValue)
 }
 
